@@ -24,9 +24,17 @@ repos:
     rev: v1.5.5
     hooks:
       - id: insert-license
-        files: \.(cpp|hpp|h|py|yaml)$
+        files: \.(cpp|hpp)$
         args:
           - --license-filepath
           - license_header.txt
           - --comment-style
           - //
+      - id: insert-license
+        files: \.(py|yaml)$
+        exclude: ".*pre-commit-config.yaml"
+        args:
+          - --license-filepath
+          - license_header.txt
+          - --comment-style
+          - "#"
