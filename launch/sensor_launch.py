@@ -3,14 +3,14 @@ from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 from launch.substitutions import PathJoinSubstitution
 from launch.actions import ExecuteProcess
+import os
+from ament_index_python.packages import get_package_share_directory
 
 
 def generate_launch_description():
-    current_pkg = FindPackageShare("voyant-ros")
 
-    # Load params
-    sensor_cfg_yaml_path = PathJoinSubstitution(
-        [current_pkg, "config", "sensor_params.yaml"]
+    sensor_cfg_yaml_path = os.path.join(
+        get_package_share_directory("voyant-ros"), "config", "sensor_params.yaml"
     )
 
     # LiDAR Node
