@@ -17,6 +17,10 @@ if(NOT DEFINED CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD_REQUIRED ON)
 endif()
 
+include_directories(${PCL_INCLUDE_DIRS})
+link_directories(${PCL_LIBRARY_DIRS})
+add_definitions(${PCL_DEFINITIONS})
+
 include_directories(
   "include;"
 )
@@ -25,10 +29,45 @@ set(voyant_ros_deps
   sensor_msgs
   pcl_conversions
 )
-add_executable(voyant_sensor_node src/sensor_node.cpp)
+add_executable(voyant_sensor_node src/main.cpp src/sensor_driver.cpp)
+
 target_link_libraries(voyant_sensor_node
-  PRIVATE voyant-api::voyant-api
+  voyant-api::voyant-api
+  ${PCL_LIBRARIES}
+)
+
+ament_target_dependencies(voyant_sensor_node
   ${voyant_ros_deps}
+)
+install(TARGETS
+  voyant_sensor_node
+  DESTINATION lib/${PROJECT_NAME}
+)
+link_directories(
+  ${PCL_LIBRARY_DIRS}
+)
+add_definitions(${PCL_DEFINITIONS})
+
+install(
+  DIRECTORY
+  include/${PROJECT_NAME}/
+  DESTINATION
+  include/${PROJECT_NAME}/
+)
+
+install(
+  FILES
+  LICENSE
+  DESTINATION
+  share/${PROJECT_NAME}
+)
+
+install(
+  DIRECTORY
+  launch
+  config
+  DESTINATION
+  share/${PROJECT_NAME}
 )
 
 if(BUILD_TESTING)
