@@ -1,3 +1,8 @@
+// Copyright (c) 2024-2025 Voyant Photonics, Inc.
+//
+// This example code is licensed under the MIT License.
+// See the LICENSE file in the repository root for full license text.
+
 import { Input, Message } from "./types";
 import { PointCloud } from "@foxglove/schemas";
 
