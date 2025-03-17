@@ -17,7 +17,7 @@
     binding_address: '0.0.0.0:4444'
     multicast_group: '224.0.0.0'
     interface_address: '127.0.0.1'
-    spn_filter: false # Enable Single Point Noise filter
+    valid_only_filter: false # Enable Single Point Noise filter
 
     # timestamp_mode[optional]
     # - TIME_FROM_SENSOR

@@ -86,7 +86,7 @@ private:
   std::string interface_address_;
   std::string timestamp_mode_;
   std::string lidar_frame_id_;
-  bool spn_filter_;
+  bool valid_only_filter_;
   int reconnect_attempts_ = 5;
 
   // ROS components

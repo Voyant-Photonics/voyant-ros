@@ -4,7 +4,9 @@
 // See the LICENSE file in the repository root for full license text.
 
 #include "voyant-ros/sensor_driver.hpp"
+#include <chrono>
 #include <pcl_conversions/pcl_conversions.h>
+#include <thread>
 
 VoyantSensorDriver::VoyantSensorDriver()
     : Node("voyant_sensor_node")
@@ -34,7 +36,7 @@ void VoyantSensorDriver::getParams()
   binding_address_ = this->get_parameter("binding_address").as_string();
   multicast_group_ = this->get_parameter("multicast_group").as_string();
   interface_address_ = this->get_parameter("interface_address").as_string();
-  spn_filter_ = this->get_parameter("spn_filter").as_bool();
+  valid_only_filter_ = this->get_parameter("spn_filter").as_bool();
   timestamp_mode_ = this->get_parameter("timestamp_mode").as_string();
   lidar_frame_id_ = this->get_parameter("frame_id").as_string();
 }
@@ -90,6 +92,7 @@ sensor_msgs::msg::PointCloud2 VoyantSensorDriver::pointDatatoRosMsg(VoyantFrameW
   // Reserve space for the point cloud
   const size_t point_count = points.size();
   pcl_cloud.reserve(point_count);
+  // An ordered pointcloud has height 1 and width equal to the number of points
   pcl_cloud.width = point_count;
   pcl_cloud.height = 1;
   pcl_cloud.is_dense = false;
@@ -100,7 +103,7 @@ sensor_msgs::msg::PointCloud2 VoyantSensorDriver::pointDatatoRosMsg(VoyantFrameW
     VoyantPoint point;
 
     // Apply SPN filter
-    if(spn_filter_ && p.drop_reason() != DropReason::UNKNOWN)
+    if(valid_only_filter_ && p.drop_reason() != DropReason::UNKNOWN)
     {
       continue;
     }
@@ -137,8 +140,10 @@ sensor_msgs::msg::PointCloud2 VoyantSensorDriver::pointDatatoRosMsg(VoyantFrameW
 
 void VoyantSensorDriver::publishPointCloud()
 {
+  const auto sleep_duration = std::chrono::milliseconds(1);
   while(rclcpp::ok() && !client_->isTerminated())
   {
+    bool frame_received = false;
     try
     {
       if(client_->tryReceiveNextFrame())
@@ -147,6 +152,7 @@ void VoyantSensorDriver::publishPointCloud()
         sensor_msgs::msg::PointCloud2 cloud_msg = this->pointDatatoRosMsg(frame);
         points_pub->publish(cloud_msg);
         RCLCPP_INFO(get_logger(), "Published point cloud");
+        frame_received = true;
       }
     }
     catch(const std::exception &e)
@@ -154,5 +160,8 @@ void VoyantSensorDriver::publishPointCloud()
       RCLCPP_ERROR(get_logger(), "[-] Error: %s", e.what());
       rclcpp::shutdown();
     }
+    // sleep for some time to avoid busy looping, but sleep less when wwe are actively receiving
+    // frames
+    std::this_thread::sleep_for(frame_received ? sleep_duration : std::chrono::milliseconds(10));
   }
 }
