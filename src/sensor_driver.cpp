@@ -47,39 +47,32 @@ void VoyantSensorDriver::initialize()
   VoyantClient::setupSignalHandling();
 
   // Try to connect to the sensor
-  for(int attempt = 1; attempt <= reconnect_attempts_; ++attempt)
+  try
   {
-    try
-    {
-      RCLCPP_INFO(get_logger(),
-                  "Connecting to sensor: %s (Attempt %d/%d)",
-                  binding_address_.c_str(),
-                  attempt,
-                  reconnect_attempts_);
-      client_ = std::make_shared<VoyantClient>(binding_address_, multicast_group_, interface_address_);
+    RCLCPP_INFO(get_logger(), "[+] Connecting to sensor: %s", binding_address_.c_str());
+    client_ = std::make_shared<VoyantClient>(binding_address_, multicast_group_, interface_address_);
 
-      // Check if the client is connected
-      if(!client_->isValid())
-      {
-        RCLCPP_ERROR(get_logger(), "[-] Failed to initialize the Voyant Sensor Driver");
-        rclcpp::shutdown();
-      }
-      while(!VoyantClient::isTerminated())
-      {
-        if(client_->tryReceiveNextFrame())
-        {
-          VoyantFrameWrapper &frame = client_->latestFrame();
-          const VoyantHeaderWrapper header_msg = frame.header();
-          RCLCPP_INFO(get_logger(), "Connected to sensor: %s", header_msg.deviceId().c_str());
-          return; // Successful connection
-        }
-      }
-      throw std::runtime_error("[-] Sensor connection failed");
-    }
-    catch(const std::exception &e)
+    // Check if the client is connected
+    if(!client_->isValid())
     {
-      RCLCPP_ERROR(get_logger(), "[-] Connection failed: %s", e.what());
+      RCLCPP_ERROR(get_logger(), "[-] Failed to initialize the Voyant Sensor Driver");
+      rclcpp::shutdown();
     }
+    while(!VoyantClient::isTerminated())
+    {
+      if(client_->tryReceiveNextFrame())
+      {
+        VoyantFrameWrapper &frame = client_->latestFrame();
+        const VoyantHeaderWrapper header_msg = frame.header();
+        RCLCPP_INFO(get_logger(), "[+] Connected to sensor: %s", header_msg.deviceId().c_str());
+        return; // Successful connection
+      }
+    }
+    throw std::runtime_error("[-] Sensor connection failed");
+  }
+  catch(const std::exception &e)
+  {
+    RCLCPP_ERROR(get_logger(), "[-] Connection failed: %s", e.what());
   }
 }
 
@@ -91,32 +84,41 @@ sensor_msgs::msg::PointCloud2 VoyantSensorDriver::pointDatatoRosMsg(VoyantFrameW
 
   // Reserve space for the point cloud
   const size_t point_count = points.size();
-  pcl_cloud.reserve(point_count);
+  pcl_cloud.resize(point_count);
   // An ordered pointcloud has height 1 and width equal to the number of points
   pcl_cloud.width = point_count;
   pcl_cloud.height = 1;
   pcl_cloud.is_dense = false;
 
+  size_t index = 0;
+
   // convert points to pcl point cloud
   for(const auto &p : points)
   {
-    VoyantPoint point;
-
-    // Apply SPN filter
-    if(valid_only_filter_ && p.drop_reason() != DropReason::UNKNOWN)
+    // Only include valid points
+    if(valid_only_filter_ && p.drop_reason() != DropReason::SUCCESS)
     {
       continue;
     }
 
+    VoyantPoint &point = pcl_cloud.points[index]; // Overwrite the point, this is safe because we
+                                                  // reserved the space and we don't have to use
+                                                  // push_back
     point.x = p.x();
     point.y = p.y();
     point.z = p.z();
     point.v = p.radial_vel();
     point.snr = p.snr_linear();
     point.drop_reason = static_cast<uint8_t>(p.drop_reason());
+    point.timestamp_nsecs = p.timestamp_nanosecs();
+    point.point_idx = p.point_index();
 
-    pcl_cloud.points.push_back(point);
+    index++; // Next valid slot
   }
+
+  pcl_cloud.resize(index);
+
+  // Convert pcl cloud to ros message
   sensor_msgs::msg::PointCloud2 ros_cloud;
   pcl::toROSMsg(pcl_cloud, ros_cloud);
 
@@ -132,9 +134,6 @@ sensor_msgs::msg::PointCloud2 VoyantSensorDriver::pointDatatoRosMsg(VoyantFrameW
     ros_cloud.header.stamp = now;
   }
   ros_cloud.header.frame_id = lidar_frame_id_;
-  ros_cloud.width = pcl_cloud.size();
-  ros_cloud.height = 1;
-
   return ros_cloud;
 }
 
@@ -151,7 +150,6 @@ void VoyantSensorDriver::publishPointCloud()
         VoyantFrameWrapper &frame = client_->latestFrame();
         sensor_msgs::msg::PointCloud2 cloud_msg = this->pointDatatoRosMsg(frame);
         points_pub->publish(cloud_msg);
-        RCLCPP_INFO(get_logger(), "Published point cloud");
         frame_received = true;
       }
     }
@@ -160,8 +158,7 @@ void VoyantSensorDriver::publishPointCloud()
       RCLCPP_ERROR(get_logger(), "[-] Error: %s", e.what());
       rclcpp::shutdown();
     }
-    // sleep for some time to avoid busy looping, but sleep less when wwe are actively receiving
-    // frames
+    // sleep for some time to avoid busy looping, but sleep less when we are actively receiving frames
     std::this_thread::sleep_for(frame_received ? sleep_duration : std::chrono::milliseconds(10));
   }
 }

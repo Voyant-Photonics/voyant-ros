@@ -23,6 +23,8 @@ struct EIGEN_ALIGN16 VoyantPoint
   float v;
   float snr;
   uint8_t drop_reason;
+  int32_t timestamp_nsecs;
+  uint32_t point_idx;
 
   inline VoyantPoint()
   {
@@ -31,6 +33,8 @@ struct EIGEN_ALIGN16 VoyantPoint
     v = 0.0f;
     snr = 0.0f;
     drop_reason = 0;
+    timestamp_nsecs = 0;
+    point_idx = 0;
   }
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };

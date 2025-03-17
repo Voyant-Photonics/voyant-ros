@@ -10,7 +10,7 @@ find_package(sensor_msgs REQUIRED)
 find_package(PCL REQUIRED COMPONENTS common)
 find_package(pcl_conversions REQUIRED)
 find_package(voyant-api REQUIRED PATHS /usr/lib/cmake/voyant-api)
-find_package(foxglove_bridge REQUIRED)
+find_package(foxglove_bridge REQUIRED QUIET)
 
 # ==============================
 # Compiler Options
@@ -69,8 +69,7 @@ install(
   share/${PROJECT_NAME}
 )
 install(DIRECTORY config/
-  DESTINATION share/${PROJECT_NAME}/config
-  FILES_MATCHING PATTERN "*.yaml")
+  DESTINATION share/${PROJECT_NAME}/config)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
