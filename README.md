@@ -71,4 +71,4 @@ The launch command will start the driver and publish pointcloud data on the `/vo
 1. Connect Foxglove to the default websocket server at `ws://localhost:8765`
 2. In the top right corner of the Foxglove GUI title bar, click on the `Layout` button and import the configuration file from `config/voyant_ros_foxglove_cfg.json`
 
-This will load a layout with pointcloud data visualization, offering three different color maps. For more information on the colormap options, refer to the [Foxglove Colormap Documentation](https://github.com/Voyant-Photonics/voyant-api/tree/main/crates/foxglove_publisher/README.md).
+This will load a layout with pointcloud data visualization, offering three different color maps. For more information on the colormap options, refer to the [Foxglove Colormap Documentation](https://voyant-photonics.github.io/getting-started/README.html).

@@ -139,7 +139,6 @@ sensor_msgs::msg::PointCloud2 VoyantSensorDriver::pointDatatoRosMsg(VoyantFrameW
 
 void VoyantSensorDriver::publishPointCloud()
 {
-  const auto sleep_duration = std::chrono::milliseconds(1);
   while(rclcpp::ok() && !client_->isTerminated())
   {
     bool frame_received = false;
@@ -159,6 +158,6 @@ void VoyantSensorDriver::publishPointCloud()
       rclcpp::shutdown();
     }
     // sleep for some time to avoid busy looping, but sleep less when we are actively receiving frames
-    std::this_thread::sleep_for(std::chrono::milliseconds(frame_received ? 0 : 10));
+    std::this_thread::sleep_for(std::chrono::milliseconds(frame_received ? 1 : 10));
   }
 }
