@@ -159,6 +159,6 @@ void VoyantSensorDriver::publishPointCloud()
       rclcpp::shutdown();
     }
     // sleep for some time to avoid busy looping, but sleep less when we are actively receiving frames
-    std::this_thread::sleep_for(frame_received ? sleep_duration : std::chrono::milliseconds(10));
+    std::this_thread::sleep_for(std::chrono::milliseconds(frame_received ? 0 : 10));
   }
 }
