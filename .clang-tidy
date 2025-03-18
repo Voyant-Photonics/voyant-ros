@@ -1,0 +1,4 @@
+Checks: '-*,readability-*,clang-analyzer-*,clang-diagnostic-*,hicpp-*,bugprone-*,concurrency-*,performace-*,portability-*,
+        -readability-magic-numbers,-readability-identifier-length,-readability-function-cognitive-complexity,-readability-uppercase-literal-suffix,
+        -hicpp-no-array-decay,-hicpp-avoid-c-arrays,-hicpp-uppercase-literal-suffix,-hicpp-vararg,-hicpp-use-auto,
+        -misc-include-cleaner,-bugprone-easily-swappable-parameters, -'

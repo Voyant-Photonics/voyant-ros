@@ -1,0 +1,32 @@
+BasedOnStyle: LLVM
+
+UseTab: Never
+IndentWidth: 2
+BreakBeforeBraces: Allman
+AllowShortIfStatementsOnASingleLine: false
+IndentCaseLabels: true
+ColumnLimit: 100
+AlignAfterOpenBracket: Align
+AlignOperands: Align
+
+InsertBraces: true
+SpaceBeforeParens: Never
+FixNamespaceComments: true
+AlignTrailingComments: true
+AllowShortBlocksOnASingleLine: false
+
+BinPackArguments: false
+BinPackParameters: false
+ExperimentalAutoDetectBinPacking: false
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowAllArgumentsOnNextLine: false
+AlignEscapedNewlines: Left
+BreakConstructorInitializers: BeforeColon
+PackConstructorInitializers: Never
+
+AlwaysBreakAfterReturnType: None
+PenaltyReturnTypeOnItsOwnLine: 999
+PenaltyExcessCharacter: 5
+PenaltyBreakComment: 20
+PenaltyBreakBeforeFirstCallParameter: 0
+PenaltyBreakOpenParenthesis: 2

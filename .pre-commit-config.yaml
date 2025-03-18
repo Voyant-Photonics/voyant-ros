@@ -1,0 +1,40 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-json
+      - id: check-toml
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.4.1
+    hooks:
+    - id: codespell
+      args:
+        - "--ignore-words-list=crate"
+
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v19.1.7
+    hooks:
+    - id: clang-format
+
+  - repo: https://github.com/Lucas-C/pre-commit-hooks
+    rev: v1.5.5
+    hooks:
+      - id: insert-license
+        files: \.(cpp|hpp|ts)$
+        args:
+          - --license-filepath
+          - license_header.txt
+          - --comment-style
+          - //
+      - id: insert-license
+        files: \.(py|yaml)$
+        exclude: ".*pre-commit-config.yaml"
+        args:
+          - --license-filepath
+          - license_header.txt
+          - --comment-style
+          - "#"
