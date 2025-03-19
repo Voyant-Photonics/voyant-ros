@@ -4,7 +4,7 @@ This ROS package provides support for Voyant sensors targeting the ROS2 Humble d
 
 ## Supported device
 
-- Medowlark: [Specsheet](https://voyantphotonics.com/products/)
+- Medowlark: [Specsheet](https://voyantphotonics.com/products/) (specsheet coming soon...)
 
 ## Pre-requisites
 
@@ -21,7 +21,8 @@ git clone git@github.com:Voyant-Photonics/voyant-ros.git
 ### 2. Install the package dependencies
 
 #### Visualization Tools
-- For Foxglove visualization, install Foxglove from the [official website](https://foxglove.dev/download/)
+- For Foxglove visualization, install Foxglove Studio from the [official website](https://foxglove.dev/download/)
+- Alternatively you can also visualize the pointcloud over the Web using the Foxglove Web. Simply open the [Foxglove Web](https://app.foxglove.dev/) and connect to the default Foxglove websocket server at `ws://localhost:8765`
 - Install the ROS2-Foxglove bridge:
   ```bash
   sudo apt install ros-humble-foxglove-*
@@ -66,9 +67,10 @@ ros2 launch voyant-ros sensor_launch.py use_rviz:=true # for rviz
 
 ## Configuring Foxglove for Pointcloud Visualization
 
-The launch command will start the driver and publish pointcloud data on the `/voyant_points` topic. It will also open the Foxglove GUI for visualization.
+The launch command will start the driver and publish pointcloud data on the `/point_cloud` topic. It will also open the Foxglove GUI for visualization.
 
-1. Connect Foxglove to the default websocket server at `ws://localhost:8765`
-2. In the top right corner of the Foxglove GUI title bar, click on the `Layout` button and import the configuration file from `config/voyant_ros_foxglove_cfg.json`
+1. Click on `Open connection...` in the Foxglove GUI on the left panel.
+2. Connect Foxglove to the default Foxglove websocket server at `ws://localhost:8765`
+3. In the top right corner of the Foxglove GUI title bar, click on the `Layout` button and import the configuration file from `config/voyant_ros_foxglove_cfg.json`
 
-This will load a layout with pointcloud data visualization, offering three different color maps. For more information on the colormap options, refer to the [Foxglove Colormap Documentation](https://voyant-photonics.github.io/getting-started/README.html).
+This will load a layout with pointcloud data visualization, offering three different color maps. For more information on the colormap options, refer to the [Foxglove Colormap Documentation](https://voyant-photonics.github.io/getting-started/visualization.html).

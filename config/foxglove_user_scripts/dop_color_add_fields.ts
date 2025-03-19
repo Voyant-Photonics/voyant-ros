@@ -1,47 +1,19 @@
 // Copyright (c) 2024-2025 Voyant Photonics, Inc.
-//
-// This example code is licensed under the MIT License.
-// See the LICENSE file in the repository root for full license text.
+// All rights reserved.
 
 import { Input } from "./types";
 import { PointCloud, PackedElementField } from "@foxglove/schemas";
 
-// Constants for point cloud field types
-const FIELD_TYPE = {
-    UINT8: 1,
-    UINT16: 2,
-    UINT32: 5,
-    INT32: 6,
-    FLOAT32: 7,
-};
-
-// Constants for input/output topics and field types
-export const inputs = ["/voyant_points"];
+// The input and output topics for your script
+export const inputs = ["/point_cloud"];
 export const output = "/dop_color_pointcloud";
 
-// Type definitions
+//Type definitions
 type GlobalVariables = {
     min_dop_bound: number;
     max_dop_bound: number;
 };
-
 type RGBColor = [number, number, number];
-
-// Data structures for point cloud fields
-const POINT_FIELDS: PackedElementField[] = [
-    { name: "x", offset: 0, type: FIELD_TYPE.FLOAT32 },
-    { name: "y", offset: 4, type: FIELD_TYPE.FLOAT32 },
-    { name: "z", offset: 8, type: FIELD_TYPE.FLOAT32 },
-    { name: "v", offset: 16, type: FIELD_TYPE.FLOAT32 },
-    { name: "snr", offset: 20, type: FIELD_TYPE.FLOAT32 },
-    { name: "drop_reason", offset: 24, type: FIELD_TYPE.UINT16 },
-    { name: "timestamp_nsecs", offset: 26, type: FIELD_TYPE.INT32 },
-    { name: "point_idx", offset: 30, type: FIELD_TYPE.UINT32 },
-    { name: "red", offset: 48, type: FIELD_TYPE.UINT8 },
-    { name: "green", offset: 49, type: FIELD_TYPE.UINT8 },
-    { name: "blue", offset: 50, type: FIELD_TYPE.UINT8 },
-    { name: "alpha", offset: 51, type: FIELD_TYPE.UINT8 },
-];
 
 // Color constants
 const DOPPLER_COLORS: RGBColor[] = [
@@ -146,48 +118,68 @@ function uint8ArrayToFloat32(bytes: Uint8Array): number {
  * @returns Processed point cloud with color data
  */
 export default function script(
-    event: Input<"/voyant_points">,
+    event: Input<"/point_cloud">,
     globalVars: GlobalVariables,
 ): PointCloud {
-    const { data } = event.message;
-    const oldStride = event.message.point_step;
-    const newStride = oldStride + 4; // Adding 4 bytes for RGBA
-    const numPoints = Math.floor(data.length / oldStride);
+    // Define interfaces that match the message structure
+    interface ROS2PointCloudMessage {
+        row_step: number;
+        point_step: number;
+        data: Uint8Array;
+        header: {
+            stamp: {
+                sec: number;
+                nsec: number;
+            };
+            frame_id: string;
+        };
+    }
 
-    // Extract doppler values from point cloud
-    const dopplerValues = extractDopplerValues(data, oldStride, numPoints);
-
-    // Map doppler values to RGB colors
-    const dopplerColors = mapDopplerToRGB(
-        dopColorMap,
-        dopplerValues,
-        globalVars.min_dop_bound,
-        globalVars.max_dop_bound,
-    );
-
-    // Create new point cloud with color data
-    const newPointCloud = createColorizedPointCloud(
-        data,
-        dopplerColors,
-        oldStride,
-        newStride,
-        numPoints,
-    );
-
-    return {
+    interface APIPointCloudMessage {
+        point_stride: number;
+        data: Uint8Array;
         timestamp: {
-            sec: event.message.header.stamp.sec,
-            nsec: event.message.header.stamp.nsec,
-        },
-        frame_id: event.message.header.frame_id,
-        pose: {
-            position: { x: 0, y: 0, z: 0 },
-            orientation: { x: 0, y: 0, z: 0, w: 1 },
-        },
-        point_stride: newStride,
-        fields: POINT_FIELDS,
-        data: newPointCloud,
-    };
+            sec: number;
+            nsec: number;
+        };
+        frame_id: string;
+        fields: any[];
+    }
+
+    // Type guard functions, this is used because TypeScript can't infer the type of the message during compilation, but we can check it at runtime
+    // Ref: https://www.typescriptlang.org/docs/handbook/advanced-types.html#using-the-in-operator
+    function isROS2PointCloud(message: any): message is ROS2PointCloudMessage {
+        return "row_step" in message && "point_step" in message;
+    }
+
+    function isAPIPointCloud(message: any): message is APIPointCloudMessage {
+        return "point_stride" in message;
+    }
+
+    if (isROS2PointCloud(event.message)) {
+        // Process ROS2 point cloud message
+        const DOP_OFFSET = 16;
+        const {
+            data,
+            point_step: originalStride,
+            header: ros_header,
+        } = event.message;
+
+        return processROS2PointCloud(
+            data,
+            originalStride,
+            ros_header,
+            globalVars,
+            DOP_OFFSET,
+        );
+    } else if (isAPIPointCloud(event.message)) {
+        // Process API point cloud message
+        const DOP_OFFSET = 20;
+        return processAPIPointCloud(event.message, globalVars, DOP_OFFSET);
+    } else {
+        // Throw an error if the message format is unknown i.e other than sensor_msgs/PointCloud2 or PointCloud
+        throw new Error("Unknown point cloud message format");
+    }
 }
 
 /**
@@ -195,15 +187,16 @@ export default function script(
  * @param data Raw point cloud data
  * @param stride Point stride in bytes
  * @param numPoints Number of points in the cloud
+ * @param DOP_OFFSET Offset of the SNR field in bytes
  * @returns Array of doppler velocity values
  */
 function extractDopplerValues(
     data: Uint8Array,
     stride: number,
     numPoints: number,
+    DOPPLER_OFFSET: number,
 ): number[] {
     const dopplerValues: number[] = [];
-    const DOPPLER_OFFSET = 16; // Doppler field offset in bytes
 
     for (let i = 0; i < numPoints; i++) {
         const pointOffset = i * stride;
@@ -262,4 +255,187 @@ function createColorizedPointCloud(
     }
 
     return newData;
+}
+
+/**
+ * Processes a ROS2 PointCloud2 message and adds color information based on SNR values
+ * @param data Point cloud data as Uint8Array
+ * @param originalStride Original point stride in bytes
+ * @param ros_header ROS2 message header
+ * @param globalVars Global variables for SNR bounds
+ * @param DOP_OFFSET Offset of the SNR field in bytes
+ * @returns Modified PointCloud message with color information
+ */
+function processROS2PointCloud(
+    data: Uint8Array,
+    originalStride: number,
+    ros_header: {
+        stamp: {
+            sec: number;
+            nsec: number;
+        };
+        frame_id: string;
+    },
+    globalVars: GlobalVariables,
+    DOP_OFFSET: number,
+) {
+    // Constants for point cloud field types
+    const FIELD_TYPE = {
+        UINT8: 1,
+        UINT16: 2,
+        UINT32: 5,
+        INT32: 6,
+        FLOAT32: 7,
+    };
+    // Define the point cloud fields including the added RGBA fields
+    const POINT_CLOUD_FIELDS: PackedElementField[] = [
+        { name: "x", offset: 0, type: FIELD_TYPE.FLOAT32 },
+        { name: "y", offset: 4, type: FIELD_TYPE.FLOAT32 },
+        { name: "z", offset: 8, type: FIELD_TYPE.FLOAT32 },
+        { name: "v", offset: 16, type: FIELD_TYPE.FLOAT32 },
+        { name: "snr", offset: 20, type: FIELD_TYPE.FLOAT32 },
+        { name: "drop_reason", offset: 24, type: FIELD_TYPE.UINT16 },
+        { name: "timestamp_nsecs", offset: 26, type: FIELD_TYPE.INT32 },
+        { name: "point_idx", offset: 30, type: FIELD_TYPE.UINT32 },
+        { name: "red", offset: 48, type: FIELD_TYPE.UINT8 },
+        { name: "green", offset: 49, type: FIELD_TYPE.UINT8 },
+        { name: "blue", offset: 50, type: FIELD_TYPE.UINT8 },
+        { name: "alpha", offset: 51, type: FIELD_TYPE.UINT8 },
+    ];
+    const numPoints = data.length / originalStride;
+
+    // Calculate new stride with RGBA fields
+    const newStride = originalStride + 4; // Adding 4 bytes for RGBA
+
+    // Extract SNR values from all points
+    const snrValues = extractDopplerValues(
+        data,
+        originalStride,
+        numPoints,
+        DOP_OFFSET,
+    );
+
+    // Create SNR color map and convert SNR values to RGB colors
+    const colorMap = createLinearColorMap(DOPPLER_COLORS);
+    const rgbColors = mapDopplerToRGB(
+        colorMap,
+        snrValues,
+        globalVars.min_dop_bound,
+        globalVars.max_dop_bound,
+    );
+
+    // Create the new point cloud data with added color information
+    const coloredPointCloud = createColorizedPointCloud(
+        data,
+        rgbColors,
+        originalStride,
+        newStride,
+        numPoints,
+    );
+
+    // Return the modified point cloud message
+    return {
+        timestamp: {
+            sec: ros_header.stamp.sec,
+            nsec: ros_header.stamp.nsec,
+        },
+        frame_id: ros_header.frame_id,
+        pose: {
+            position: { x: 0, y: 0, z: 0 },
+            orientation: { x: 0, y: 0, z: 0, w: 1 },
+        },
+        point_stride: newStride,
+        fields: POINT_CLOUD_FIELDS,
+        data: coloredPointCloud,
+    };
+}
+
+/**
+ * Processes an API PointCloud message and adds color information based on SNR values
+ * @param api_message API PointCloud message
+ * @param globalVars Global variables for SNR bounds
+ * @param DOP_OFFSET Offset of the SNR field in bytes
+ * @returns Modified PointCloud message with color information
+ */
+function processAPIPointCloud(
+    api_message: {
+        data: Uint8Array;
+        point_stride: number;
+        timestamp: {
+            sec: number;
+            nsec: number;
+        };
+        frame_id: string;
+        fields: any[];
+    },
+    globalVars: GlobalVariables,
+    DOP_OFFSET: number,
+) {
+    // Get the original point cloud data as a Uint8Array
+    const {
+        data,
+        point_stride: old_strid,
+        fields: cloud_fields,
+        timestamp: ts,
+        frame_id: fid,
+    } = api_message;
+
+    // Calculate new stride
+    const new_strid = old_strid + 4 * 1; // 11 fields of 4 bytes each + 4 fields of 1 byte each (RGBA)
+    const numPoints = Math.floor(data.length / old_strid);
+
+    const dopplerValues = extractDopplerValues(
+        data,
+        old_strid,
+        numPoints,
+        DOP_OFFSET,
+    );
+
+    // Map the Doppler values to RGB colors
+    const dopplerColors = mapDopplerToRGB(
+        dopColorMap,
+        dopplerValues,
+        globalVars.min_dop_bound,
+        globalVars.max_dop_bound,
+    );
+
+    // Create a new point cloud with color data
+    // Create new point cloud with color data
+    const newPointCloud = createColorizedPointCloud(
+        data,
+        dopplerColors,
+        old_strid,
+        new_strid,
+        numPoints,
+    );
+
+    // Return the modified point cloud message
+    return {
+        timestamp: {
+            sec: ts.sec,
+            nsec: ts.nsec,
+        },
+        frame_id: fid,
+        pose: {
+            position: {
+                x: 0,
+                y: 0,
+                z: 0,
+            },
+            orientation: {
+                x: 0,
+                y: 0,
+                z: 0,
+                w: 1,
+            },
+        },
+        point_stride: new_strid,
+        fields: cloud_fields.concat(
+            { name: "red", offset: 44, type: 1 },
+            { name: "green", offset: 45, type: 1 },
+            { name: "blue", offset: 46, type: 1 },
+            { name: "alpha", offset: 47, type: 1 },
+        ),
+        data: newPointCloud,
+    };
 }

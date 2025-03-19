@@ -11,9 +11,13 @@
 VoyantSensorDriver::VoyantSensorDriver()
     : Node("voyant_sensor_node")
 {
+  // ToDo: Write a sensor defined QoS profile
   getParams();
   initialize();
-  points_pub = this->create_publisher<sensor_msgs::msg::PointCloud2>("voyant_points", 100);
+  // Note: Changing the default point cloud topic name will break the `voyant_foxglove_cfg.json`
+  // file, but you can always remap the topic name or visualize the point cloud using different
+  // config file in Foxglove or RViz.
+  points_pub = this->create_publisher<sensor_msgs::msg::PointCloud2>("point_cloud", 100);
   publishPointCloud();
 }
 

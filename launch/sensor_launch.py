@@ -6,12 +6,12 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
 from launch.actions import (
-    ExecuteProcess,
     DeclareLaunchArgument,
     IncludeLaunchDescription,
 )
 import os
 from launch.conditions import IfCondition, UnlessCondition
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_xml.launch_description_sources import XMLLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from ament_index_python.packages import get_package_share_directory
@@ -19,8 +19,9 @@ from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
 
+    voyant_ros_pkg_path = get_package_share_directory("voyant-ros")
     sensor_cfg_yaml_path = os.path.join(
-        get_package_share_directory("voyant-ros"), "config", "sensor_params.yaml"
+        voyant_ros_pkg_path, "config", "sensor_params.yaml"
     )
 
     # use rviz to visualize the point cloud, if false uses foxglove studio
@@ -55,20 +56,14 @@ def generate_launch_description():
     )
 
     # Foxglove Studio
-    foxglove_studio = ExecuteProcess(
-        cmd=["foxglove-studio"],
-        condition=UnlessCondition(use_rviz),
-    )
     foxglove_launch_file = os.path.join(
-        get_package_share_directory("foxglove_bridge"),
+        voyant_ros_pkg_path,
         "launch",
-        "foxglove_bridge_launch.xml",
+        "foxglove_viz_launch.py",
     )
     foxglove_bridge = IncludeLaunchDescription(
-        XMLLaunchDescriptionSource([str(foxglove_launch_file)]),
+        PythonLaunchDescriptionSource([str(foxglove_launch_file)]),
         condition=UnlessCondition(use_rviz),
     )
 
-    return LaunchDescription(
-        [use_rviz_arg, lidar_node, foxglove_bridge, foxglove_studio, rviz]
-    )
+    return LaunchDescription([use_rviz_arg, lidar_node, rviz, foxglove_bridge])
