@@ -17,6 +17,20 @@ Follow the official [ROS2 documentation](https://docs.ros.org/en/humble/Installa
 ```bash
 git clone git@github.com:Voyant-Photonics/voyant-ros.git
 ```
+#### Docker Instructions
+This repository also provides a Dockerfile to build a Docker image with the ROS2 Humble distribution and the Voyant ROS package. To build the Docker image, run the following command:
+
+```bash
+docker build --build-arg "VIZ_BRIDGE=true" -t voyant_ros2_container .
+```
+> **Note**
+> The `VIZ_BRIDGE` argument is optional and can be set to `true` to install the Foxglove bridge for visualization. The default value is `false`. If the argument is set to `true`, the Foxglove bridge will be installed. Follow the instructions from the [Visualization Guide](https://voyant-photonics.github.io/getting-started/visualization.html#importing-configuration-files) to configure Foxglove for pointcloud visualization in separate terminal.
+
+To run the Docker container, execute the following command:
+
+```bash
+docker run -it --network=host voyant_ros2_container
+```
 
 ### 2. Install the package dependencies
 

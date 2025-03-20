@@ -12,7 +12,6 @@ from launch.actions import (
 import os
 from launch.conditions import IfCondition, UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch_xml.launch_description_sources import XMLLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from ament_index_python.packages import get_package_share_directory
 
