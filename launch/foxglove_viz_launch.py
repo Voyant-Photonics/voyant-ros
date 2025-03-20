@@ -1,3 +1,9 @@
+# Copyright (c) 2024-2025 Voyant Photonics, Inc.
+#
+# This example code is licensed under the MIT License.
+# See the LICENSE file in the repository root for full license text.
+
+# This file is used by `sensor_launch.py` to launch Foxglove Studio and the Foxglove Bridge.
 from launch import LaunchDescription
 from launch.actions import ExecuteProcess
 

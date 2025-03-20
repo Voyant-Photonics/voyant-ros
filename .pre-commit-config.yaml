@@ -14,7 +14,7 @@ repos:
         - "--ignore-words-list=crate"
 
   - repo: https://github.com/pre-commit/mirrors-clang-format
-    rev: v19.1.7
+    rev: v20.1.0
     hooks:
     - id: clang-format
 
@@ -22,6 +22,7 @@ repos:
     rev: v1.5.5
     hooks:
       - id: insert-license
+        name: "Insert License C++/TypeScript"
         files: \.(cpp|hpp|ts)$
         args:
           - --license-filepath
@@ -29,6 +30,7 @@ repos:
           - --comment-style
           - //
       - id: insert-license
+        name: "Insert License Python/YAML"
         files: \.(py|yaml)$
         exclude: ".*pre-commit-config.yaml"
         args:

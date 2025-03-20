@@ -1,5 +1,7 @@
 // Copyright (c) 2024-2025 Voyant Photonics, Inc.
-// All rights reserved.
+//
+// This example code is licensed under the MIT License.
+// See the LICENSE file in the repository root for full license text.
 
 import { Input } from "./types";
 import { PointCloud, PackedElementField } from "@foxglove/schemas";
