@@ -1,15 +1,22 @@
 ARG ROS_DISTRO=humble
-ARG RMW_IMPLEMENTATION=rmw_fastrtps_cpp
-
 FROM ros:${ROS_DISTRO}-ros-core AS build-env
+
+# Set shell options for better error handling
+SHELL ["/bin/bash", "-c"]
+
+ARG RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+ARG VIZ_BRIDGE="false"
 ENV DEBIAN_FRONTEND=noninteractive \
-    RMW_IMPLEMENTATION=${RMW_IMPLEMENTATION} \
+    RMW_IMPLEMENTATION_ARG=${RMW_IMPLEMENTATION} \
+    VIZ_BRIDGE_ARG=${VIZ_BRIDGE} \
     BUILD_HOME=/var/lib/build
 
-RUN apt-get update && apt-get install -y \
+# Install dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-colcon-common-extensions \
     ros-${ROS_DISTRO}-ros2launch \
     ros-${ROS_DISTRO}-pcl-ros \
+    libpcl-dev \
     build-essential \
     apt-utils \
     cmake \
@@ -18,9 +25,13 @@ RUN apt-get update && apt-get install -y \
     pkg-config \
     jq \
     wget \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-RUN if [ "$RMW_IMPLEMENTATION" = "rmw_cyclonedds_cpp" ]; then \
+# Create workspace directory
+WORKDIR ${BUILD_HOME}
+
+RUN if [ "$RMW_IMPLEMENTATION_ARG" = "rmw_cyclonedds_cpp" ]; then \
     apt-get update && \
     apt-get install -y ros-${ROS_DISTRO}-rmw-cyclonedds-cpp && \
     rm -rf /var/lib/apt/lists/*; \
@@ -61,10 +72,7 @@ COPY . ./voyant-ros
 WORKDIR /ros2_ws
 
 # Build the ROS2 package
-RUN . /opt/ros/${ROS_DISTRO}/setup.sh && colcon build --symlink-install
-
-ARG VIZ_BRIDGE="false"
-ENV VIZ_BRIDGE_ARG=$VIZ_BRIDGE
+RUN source /opt/ros/${ROS_DISTRO}/setup.sh && colcon build --symlink-install
 
 # Install foxglove dependencies if VIZ_BRIDGE_ARG is true
 RUN if [ "$VIZ_BRIDGE_ARG" = "true" ]; then \
@@ -76,7 +84,6 @@ RUN if [ "$VIZ_BRIDGE_ARG" = "true" ]; then \
 # Set up entrypoint
 RUN echo "source /ros2_ws/install/setup.bash" >> ~/.bashrc
 # Entry point
-SHELL ["/bin/bash", "-c"]
 ENTRYPOINT source /ros2_ws/install/setup.bash && \
     echo "VIZ_BRIDGE_ARG value: $VIZ_BRIDGE_ARG" && \
     if [ "$VIZ_BRIDGE_ARG" = "true" ]; then \
