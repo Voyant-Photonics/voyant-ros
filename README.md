@@ -18,7 +18,8 @@ Follow the official [ROS2 documentation](https://docs.ros.org/en/humble/Installa
 git clone git@github.com:Voyant-Photonics/voyant-ros.git
 ```
 #### Docker Instructions
-This repository also provides a Dockerfile to build a Docker image with the ROS2 Humble distribution and the Voyant ROS package. To build the Docker image, run the following command:
+This repository also provides a Dockerfile to build a Docker image with the ROS2 Humble distribution and the Voyant ROS package.
+To build the Docker image, run the following command from the repo root:
 
 ```bash
 docker build --build-arg "VIZ_BRIDGE=true" -t voyant_ros2_container .
