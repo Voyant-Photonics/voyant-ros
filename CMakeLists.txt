@@ -10,7 +10,6 @@ find_package(sensor_msgs REQUIRED)
 find_package(PCL REQUIRED COMPONENTS common)
 find_package(pcl_conversions REQUIRED)
 find_package(voyant-api REQUIRED PATHS /usr/lib/cmake/voyant-api)
-find_package(foxglove_bridge REQUIRED QUIET)
 
 # ==============================
 # Compiler Options
