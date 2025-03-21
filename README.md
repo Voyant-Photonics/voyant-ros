@@ -2,6 +2,8 @@
 
 This ROS package provides support for Voyant sensors targeting the ROS2 Humble distribution. Configure the sensor (client) address using the `config/sensor_params.yaml` file. This package only supports `ROS2 Humble` and `Ubuntu 22.04` for now, and it is not guaranteed to work with other ROS2 distributions or operating systems. Support for other distributions and operating systems will be added in the future.
 
+For Docker instructions on other ROS2 distributions and RMW implementations, refer to the [Docker Instructions](#docker-instructions) section.
+
 ## Supported device
 
 - Medowlark: [Specsheet](https://voyantphotonics.com/products/) (specsheet coming soon...)
@@ -45,6 +47,15 @@ To build the Docker image, run the following command from the repo root:
 
 ```bash
 docker build --build-arg "VIZ_BRIDGE=true" -t voyant_ros2_container .
+```
+
+The Docker image has been tested on Ubuntu 22.04 and ROS2 distributions like Humble, Iron, Rolling and Jazzy. RMW implementations like FastRTPS and CycloneDDS have been tested with the Docker image.
+
+```bash
+docker build --build-arg "VIZ_BRIDGE=true" \
+             --build-arg "ROS_DISTRO=rolling" \ # humble, iron, rolling, jazzy
+             --build-arg "RMW_IMPLEMENTATION=rmw_cyclonedds_cpp" \ # rmw_fastrtps_cpp, rmw_cyclonedds_cpp
+             -t voyant_ros2_container .
 ```
 
 > **Note**
