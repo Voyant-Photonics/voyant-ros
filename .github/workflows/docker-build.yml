@@ -1,0 +1,33 @@
+name: Voyant ROS2 Docker Build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft != true }}
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        ros_distro: [humble, iron, rolling, jazzy]
+        rmw: [rmw_fastrtps_cpp, rmw_cyclonedds_cpp]
+
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+
+      - name: Build the Docker image
+        run: |
+          docker build .                                          \
+            --build-arg ROS_DISTRO=${{ matrix.ros_distro }}       \
+            --build-arg RMW_IMPLEMENTATION=${{ matrix.rmw }}  \
+            --file Dockerfile                                     \
+            --tag voyant-ros-${{ matrix.ros_distro }}-${{ matrix.rmw }}:latest
+
+
