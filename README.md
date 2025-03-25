@@ -6,7 +6,7 @@ For Docker instructions on other ROS2 distributions and RMW implementations, ref
 
 ## Supported device
 
-- Medowlark: [Specsheet](https://voyantphotonics.com/products/) (specsheet coming soon...)
+- Meadowlark: [Specsheet](https://voyantphotonics.com/products/) (specsheet coming soon...)
 
 ## Pre-requisites
 
