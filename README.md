@@ -17,7 +17,7 @@ Follow the official [ROS2 documentation](https://docs.ros.org/en/humble/Installa
 ### 1. Clone the repository
 
 ```bash
-mkdir -r ~/ros2_ws/src && cd ~/ros2_ws/src
+mkdir -p ~/ros2_ws/src && cd ~/ros2_ws/src
 git clone git@github.com:Voyant-Photonics/voyant-ros.git
 ```
 
