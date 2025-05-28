@@ -13,7 +13,7 @@
     # When connecting to an actual sensor
     #  - "0.0.0.0:8080": Binds to all interfaces on port 8080
     #  - "224.0.0.0": Standard multicast group address for the sensor
-    #  - "192.168.1.100": Your network interface's IP address
+    #  - "192.168.20.100": Your network interface's IP address
     binding_address: '0.0.0.0:4444'
     multicast_group: '224.0.0.0'
     interface_address: '127.0.0.1'
