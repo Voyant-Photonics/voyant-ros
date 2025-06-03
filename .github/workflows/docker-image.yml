@@ -17,6 +17,11 @@ jobs:
       matrix:
         ros_distro: [humble, iron, rolling, jazzy]
         rmw: [rmw_fastrtps_cpp, rmw_cyclonedds_cpp]
+        exclude: 
+          - ros_distro: iron
+            rmw: rmw_fastrtps_cpp
+          - ros_distro: iron
+            rmw: rmw_cyclonedds_cpp
 
     steps:
       - name: Checkout the repository
