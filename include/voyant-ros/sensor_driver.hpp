@@ -167,16 +167,6 @@ sensor_msgs::msg::PointCloud2 convertFrameToPointCloud2(const FrameT &frame, con
           "Unknown timestamp_mode enum value: " + std::to_string(config.timestamp_mode));
   }
 
-  // if(config.timestamp_mode == "TIME_FROM_SENSOR")
-  // {
-  //   ros_cloud.header.stamp.sec = frame.header().timestampSeconds();
-  //   ros_cloud.header.stamp.nanosec = frame.header().timestampNanoseconds();
-  // }
-  // else
-  // {
-  //   ros_cloud.header.stamp = rclcpp::Clock().now();
-  // }
-
   ros_cloud.header.frame_id = config.lidar_frame_id;
   return ros_cloud;
 }
