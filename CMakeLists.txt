@@ -5,6 +5,19 @@ if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 17)
 endif()
 
+# Detect ROS 2 distro version automatically
+if(DEFINED ENV{ROS_DISTRO})
+  message(STATUS "Detected ROS_DISTRO: $ENV{ROS_DISTRO}")
+
+  if("$ENV{ROS_DISTRO}" STREQUAL "rolling")
+    add_compile_definitions(ROS2_ROLLING)
+  elseif("$ENV{ROS_DISTRO}" STREQUAL "jazzy")
+    add_compile_definitions(ROS2_JAZZY)
+  elseif("$ENV{ROS_DISTRO}" STREQUAL "humble")
+    add_compile_definitions(ROS2_HUMBLE)
+  endif()
+endif()
+
 # ==============================
 # Dependencies
 # ==============================
@@ -15,6 +28,7 @@ find_package(PCL REQUIRED COMPONENTS common)
 find_package(pcl_conversions REQUIRED)
 find_package(voyant-api REQUIRED PATHS /usr/lib/cmake/voyant-api)
 find_package(rosbag2_cpp REQUIRED)
+find_package(yaml-cpp REQUIRED)
 
 # ==============================
 # Compiler Options
@@ -42,6 +56,8 @@ target_link_libraries(voyant_sensor_node
 add_executable(voyant_bin_to_mcap src/bin_to_mcap.cpp src/voyant_rosbag2_converter.cpp)
 target_link_libraries(voyant_bin_to_mcap
   voyant-api::voyant-api
+  yaml-cpp
+  ${voyant_sensor_node}
   ${PCL_LIBRARIES}
 )
 set_target_properties(voyant_bin_to_mcap

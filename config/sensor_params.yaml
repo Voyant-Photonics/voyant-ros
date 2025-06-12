@@ -17,11 +17,16 @@
     binding_address: '0.0.0.0:4444'
     multicast_group: '224.0.0.0'
     interface_address: '127.0.0.1'
+
+    # The below params are shared with the bin_to_mcap conversion
     valid_only_filter: false # Enable Single Point Noise filter
-
     # timestamp_mode[optional]
-    # - TIME_FROM_SENSOR
-    # - TIME_FROM_ROS
-    timestamp_mode: 'TIME_FROM_ROS'
-
+    # - 0 = TIME_FROM_SENSOR
+    # - 1 = TIME_FROM_ROS
+    timestamp_mode: '0'
     frame_id: 'voyant_sensor'
+    bin_input: '/home/yash/Downloads/forest_walk-mdl-v0_1_0.bin'
+    mcap_output: '/home/yash/Downloads/curr_time'
+    storage_id: 'mcap' # sqlite3/mcap
+    serialization_format: 'cdr'
+    topic_name: '/point_cloud' # Changing this will break the foxglove multi colormap visualization,

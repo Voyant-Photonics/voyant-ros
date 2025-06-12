@@ -37,12 +37,12 @@ void VoyantSensorDriver::getParams()
   this->declare_parameter<std::string>("timestamp_mode", "TIME_FROM_ROS");
   this->declare_parameter<std::string>("frame_id", "lidar_sensor");
 
-  binding_address_ = this->get_parameter("binding_address").as_string();
-  multicast_group_ = this->get_parameter("multicast_group").as_string();
-  interface_address_ = this->get_parameter("interface_address").as_string();
-  valid_only_filter_ = this->get_parameter("spn_filter").as_bool();
-  timestamp_mode_ = this->get_parameter("timestamp_mode").as_string();
-  lidar_frame_id_ = this->get_parameter("frame_id").as_string();
+  config_.binding_address = this->get_parameter("binding_address").as_string();
+  config_.multicast_group = this->get_parameter("multicast_group").as_string();
+  config_.interface_address = this->get_parameter("interface_address").as_string();
+  config_.valid_only_filter = this->get_parameter("spn_filter").as_bool();
+  config_.timestamp_mode = this->get_parameter("timestamp_mode").as_int();
+  config_.lidar_frame_id = this->get_parameter("frame_id").as_string();
 }
 
 void VoyantSensorDriver::initialize()
@@ -53,8 +53,10 @@ void VoyantSensorDriver::initialize()
   // Try to connect to the sensor
   try
   {
-    RCLCPP_INFO(get_logger(), "[+] Connecting to sensor: %s", binding_address_.c_str());
-    client_ = std::make_shared<VoyantClient>(binding_address_, multicast_group_, interface_address_);
+    RCLCPP_INFO(get_logger(), "[+] Connecting to sensor: %s", config_.binding_address.c_str());
+    client_ = std::make_shared<VoyantClient>(config_.binding_address,
+                                             config_.multicast_group,
+                                             config_.interface_address);
 
     // Check if the client is connected
     if(!client_->isValid())
@@ -82,63 +84,7 @@ void VoyantSensorDriver::initialize()
 
 sensor_msgs::msg::PointCloud2 VoyantSensorDriver::pointDatatoRosMsg(VoyantFrameWrapper &frame)
 {
-
-  pcl::PointCloud<VoyantPoint> pcl_cloud;
-  const auto &points = frame.points();
-
-  // Reserve space for the point cloud
-  const size_t point_count = points.size();
-  pcl_cloud.resize(point_count);
-  // An ordered pointcloud has height 1 and width equal to the number of points
-  pcl_cloud.width = point_count;
-  pcl_cloud.height = 1;
-  pcl_cloud.is_dense = false;
-
-  size_t index = 0;
-
-  // convert points to pcl point cloud
-  for(const auto &p : points)
-  {
-    // Only include valid points
-    if(valid_only_filter_ && p.drop_reason() != DropReason::SUCCESS)
-    {
-      continue;
-    }
-
-    VoyantPoint &point = pcl_cloud.points[index]; // Overwrite the point, this is safe because we
-                                                  // reserved the space and we don't have to use
-                                                  // push_back
-    point.x = p.x();
-    point.y = p.y();
-    point.z = p.z();
-    point.v = p.radial_vel();
-    point.snr = p.snr_linear();
-    point.drop_reason = static_cast<uint8_t>(p.drop_reason());
-    point.timestamp_nsecs = p.timestamp_nanosecs();
-    point.point_idx = p.point_index();
-
-    index++; // Next valid slot
-  }
-
-  pcl_cloud.resize(index);
-
-  // Convert pcl cloud to ros message
-  sensor_msgs::msg::PointCloud2 ros_cloud;
-  pcl::toROSMsg(pcl_cloud, ros_cloud);
-
-  // set header timestamps
-  if(timestamp_mode_ == "TIME_FROM_SENSOR")
-  {
-    ros_cloud.header.stamp.sec = frame.header().timestampSeconds();
-    ros_cloud.header.stamp.nanosec = frame.header().timestampNanoseconds();
-  }
-  else
-  {
-    auto now = this->now();
-    ros_cloud.header.stamp = now;
-  }
-  ros_cloud.header.frame_id = lidar_frame_id_;
-  return ros_cloud;
+  return convertFrameToPointCloud2<VoyantPoint>(frame, this->config_);
 }
 
 void VoyantSensorDriver::publishPointCloud()

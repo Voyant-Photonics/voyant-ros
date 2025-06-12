@@ -1,4 +1,4 @@
-ARG ROS_DISTRO=humble
+ARG ROS_DISTRO=jazzy
 FROM ros:${ROS_DISTRO}-ros-core AS build-env
 
 # Set shell options for better error handling
