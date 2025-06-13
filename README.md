@@ -95,6 +95,28 @@ or with RViz visualization
 ros2 launch voyant-ros sensor_launch.py use_rviz:=true # for rviz
 ```
 
+## Converting `.bin` files to ROS2 bag format
+The configurations for ROS2 bag can be found in `config/sensor_params.yaml` file. There are two ways you can run use the conversion tool.
+
+### 1. Using the binaries from `colcon build`
+
+If you have already build the `voyant-ros` package using `colcon`, use the binary files as below.
+```bash
+cd ~/ros2_ws/build/voyant-ros
+./bin/voyant_bin_to_mcap ros2_ws/src/voyant-ros/config/sensor_params.yaml # path to your params yaml file
+```
+
+### 2. Build the package using `cmake`
+
+```bash
+cd ~/ros2_ws/src/voyant-ros
+mkdir -p build
+cd build
+cmake ..
+make
+./bin/voyant_bin_to_mcap ros2_ws/src/voyant-ros/config/sensor_params.yaml # path to your params yaml file
+```
+
 ## Configuring Foxglove for Pointcloud Visualization
 
 The launch command will start the driver and publish pointcloud data on the `/point_cloud` topic. It will also open the Foxglove GUI for visualization.

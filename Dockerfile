@@ -1,4 +1,4 @@
-ARG ROS_DISTRO=humble
+ARG ROS_DISTRO=jazzy
 FROM ros:${ROS_DISTRO}-ros-core AS build-env
 
 # Set shell options for better error handling
@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-colcon-common-extensions \
     ros-${ROS_DISTRO}-ros2launch \
     ros-${ROS_DISTRO}-pcl-ros \
+    ros-${ROS_DISTRO}-rosbag2 \
     libpcl-dev \
     build-essential \
     apt-utils \
