@@ -25,8 +25,8 @@
     # - 1 = TIME_FROM_ROS
     timestamp_mode: '0'
     frame_id: 'voyant_sensor'
-    bin_input: '/home/yash/Downloads/forest_walk-mdl-v0_1_0.bin'
-    mcap_output: '/home/yash/Downloads/curr_time'
+    bin_input: '' # Path to your bin file
+    mcap_output: '' # Desired output path
     storage_id: 'mcap' # sqlite3/mcap
     serialization_format: 'cdr'
     topic_name: '/point_cloud' # Changing this will break the foxglove multi colormap visualization,
