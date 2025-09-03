@@ -23,7 +23,7 @@
     # timestamp_mode[optional]
     # - 0 = TIME_FROM_SENSOR
     # - 1 = TIME_FROM_ROS
-    timestamp_mode: '0'
+    timestamp_mode: 0
     frame_id: 'voyant_sensor'
     bin_input: '' # Path to your bin file
     mcap_output: '' # Desired output path

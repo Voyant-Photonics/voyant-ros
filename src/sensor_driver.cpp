@@ -34,7 +34,7 @@ void VoyantSensorDriver::getParams()
   this->declare_parameter<std::string>("multicast_group", "224.0.0.0");
   this->declare_parameter<std::string>("interface_address", "127.0.0.1");
   this->declare_parameter<bool>("spn_filter", true);
-  this->declare_parameter<std::string>("timestamp_mode", "TIME_FROM_ROS");
+  this->declare_parameter<int>("timestamp_mode", 0);
   this->declare_parameter<std::string>("frame_id", "lidar_sensor");
 
   config_.binding_address = this->get_parameter("binding_address").as_string();
