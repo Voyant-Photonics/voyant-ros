@@ -96,14 +96,14 @@ ros2 launch foxglove_bridge foxglove_bridge_launch.xml
 Start from a directory that has:
 
 ```bash
-$ ls
+$ ls debs/
 ros-humble-voyant-ros_0.2.1-0jammy_amd64.deb  voyant-api_0.2.1-1_amd64.deb  voyant-api-dev_0.2.1-1_amd64.deb
 ```
 
 Then run a clean ROS humble docker container:
 
 ```bash
-docker run -it --rm --name voyant_ros_container --network host -v $(pwd):/debs osrf/ros:humble-desktop
+docker run -it --rm --name voyant_ros_container --network host -v $(pwd):/workspace --workdir /workspace osrf/ros:humble-desktop
 ```
 
 Install the cap'n proto dependency from source:
@@ -129,8 +129,8 @@ Install the debians:
 
 ```bash
 apt update
-apt install -y /debs/voyant-api*.deb
-apt install -y /debs/ros-humble-voyant-ros*.deb
+apt install -y /workspace/debs/voyant-api*.deb
+apt install -y /workspace/debs/ros-humble-voyant-ros*.deb
 apt install -y ros-humble-foxglove-* # for visualization
 ```
 
