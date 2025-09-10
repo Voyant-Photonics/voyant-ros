@@ -85,6 +85,7 @@ ament_target_dependencies(voyant_bin_to_mcap
 # ==============================
 install(TARGETS
   voyant_sensor_node
+  voyant_bin_to_mcap
   DESTINATION lib/${PROJECT_NAME}
 )
 install(
