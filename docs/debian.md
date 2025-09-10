@@ -1,7 +1,6 @@
-
 # [WIP] voyant-ros debian
 
-## Generating a debian
+## Setup
 
 Install deps:
 
@@ -36,7 +35,11 @@ IFF you fail this:
 sudo sed -i '/debian.yaml/s/^/# /' /etc/ros/rosdep/sources.list.d/10-debian.list
 ```
 
-Then generate:
+And try `rosdep update` again.
+
+## Generate a release
+
+From `voyant-ros/` generate a debian with:
 
 ```bash
 bloom-generate rosdebian --os-name ubuntu --os-version jammy --ros-distro humble
@@ -88,6 +91,72 @@ Visualize in another terminal
 ros2 launch foxglove_bridge foxglove_bridge_launch.xml
 ```
 
+### Test package in a clean docker container
+
+Start from a directory that has:
+
+```bash
+$ ls
+ros-humble-voyant-ros_0.2.1-0jammy_amd64.deb  voyant-api_0.2.1-1_amd64.deb  voyant-api-dev_0.2.1-1_amd64.deb
+```
+
+Then run a clean ROS humble docker container:
+
+```bash
+docker run -it --rm --name voyant_ros_container --network host -v $(pwd):/debs osrf/ros:humble-desktop
+```
+
+Install the cap'n proto dependency from source:
+
+```bash
+curl -O https://capnproto.org/capnproto-c++-1.1.0.tar.gz
+tar zxf capnproto-c++-1.1.0.tar.gz
+cd capnproto-c++-1.1.0
+./configure
+make -j6 check
+sudo make install
+```
+
+> NOTE: This is currently required for `ros-humble-voyant-ros`
+>
+> To get around this we either need to:
+>
+> 1. Statically compile Cap'n Proto into `ros-humble-voyant-ros`
+> 2. Compile Cap'n proto into a debian or host as an apt package
+> 3. Remove the Cap'n Proto dependency from the API
+
+Install the debians:
+
+```bash
+apt update
+apt install -y /debs/voyant-api*.deb
+apt install -y /debs/ros-humble-voyant-ros*.deb
+apt install -y ros-humble-foxglove-* # for visualization
+```
+
+Run the node:
+
+```bash
+ros2 run voyant-ros voyant_sensor_node
+```
+
+Run the mock points stream in terminal 2:
+
+> This can be run outside the docker if you have `voyant-api` installed on host
+
+```bash
+docker exec -it voyant_ros_container bash
+voyant_points_mock_stream --bind-addr 127.0.0.1:0 --group-addr 224.0.0.0:4444
+```
+
+Run the ROS2 foxglove bridge in terminal 3:
+
+```bash
+docker exec -it voyant_ros_container bash
+source /opt/ros/humble/setup.bash
+ros2 launch foxglove_bridge foxglove_bridge_launch.xml
+```
+
 ### Clean up the debian build
 
 ```bash
@@ -101,27 +170,4 @@ rm -rf debian
 
 # Remove the generated package files
 rm -f ../ros-humble-voyant-ros*
-```
-
-### Test package in a clean docker container
-
-Start from a directory that has:
-
-```bash
-$ ls
-ros-humble-voyant-ros_0.1.0-0jammy_amd64.deb  voyant-api_0.2.1-1_amd64.deb  voyant-api-dev_0.2.1-1_amd64.deb
-```
-
-Then run a clean ROS humble docker container:
-
-```bash
-docker run -it --rm -v $(pwd):/debs osrf/ros:humble-desktop
-```
-
-Install:
-
-```bash
-apt update
-apt install -y /debs/voyant-api*.de
-apt install -y /debs/ros-humble-voyant-ros*.deb
 ```
