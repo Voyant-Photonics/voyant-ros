@@ -90,8 +90,8 @@ ENTRYPOINT source /ros2_ws/install/setup.bash && \
     if [ "$VIZ_BRIDGE_ARG" = "true" ]; then \
     echo "Starting with Foxglove bridge enabled" && \
     ros2 launch foxglove_bridge foxglove_bridge_launch.xml & \
-    ros2 launch voyant-ros sensor_driver_minimal_launch.py; \
+    ros2 launch voyant_ros sensor_driver_minimal_launch.py; \
     else \
     echo "Starting with minimal sensor driver" && \
-    ros2 launch voyant-ros sensor_driver_minimal_launch.py; \
+    ros2 launch voyant_ros sensor_driver_minimal_launch.py; \
     fi

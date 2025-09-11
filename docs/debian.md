@@ -1,4 +1,4 @@
-# [WIP] voyant-ros debian
+# [WIP] voyant_ros debian
 
 ## Setup
 
