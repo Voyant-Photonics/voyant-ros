@@ -11,7 +11,7 @@
     # - "127.0.0.1": Interface address (localhost/loopback)
     #
     # When connecting to an actual sensor
-    #  - "0.0.0.0:8080": Binds to all interfaces on port 8080
+    #  - "0.0.0.0:4444": Binds to all interfaces on port 4444
     #  - "224.0.0.0": Standard multicast group address for the sensor
     #  - "192.168.20.100": Your network interface's IP address
     binding_address: '0.0.0.0:4444'
