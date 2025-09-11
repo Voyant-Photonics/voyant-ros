@@ -57,7 +57,6 @@ add_executable(voyant_bin_to_mcap src/bin_to_mcap.cpp src/voyant_rosbag2_convert
 target_link_libraries(voyant_bin_to_mcap
   voyant-api::voyant-api
   yaml-cpp
-  ${voyant_sensor_node}
   ${PCL_LIBRARIES}
 )
 set_target_properties(voyant_bin_to_mcap
@@ -85,6 +84,7 @@ ament_target_dependencies(voyant_bin_to_mcap
 # ==============================
 install(TARGETS
   voyant_sensor_node
+  voyant_bin_to_mcap
   DESTINATION lib/${PROJECT_NAME}
 )
 install(
