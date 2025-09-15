@@ -4,7 +4,7 @@
 // This example code is licensed under the MIT License.
 // See the LICENSE file in the repository root for full license text.
 
-#include "voyant-ros/bin_to_mcap.hpp"
+#include "voyant_ros/bin_to_mcap.hpp"
 
 int main(int argc, char *argv[])
 {
