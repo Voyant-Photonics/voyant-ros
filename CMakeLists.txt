@@ -89,7 +89,9 @@ ament_target_dependencies(voyant_bin_to_mcap
   pcl_conversions
 )
 
-# Link against the generated interfaces (if needed by executables)
+# ==============================
+# Link Custom Message Interfaces
+# ==============================
 rosidl_get_typesupport_target(cpp_typesupport_target ${PROJECT_NAME} "rosidl_typesupport_cpp")
 target_link_libraries(voyant_sensor_node "${cpp_typesupport_target}")
 target_link_libraries(voyant_bin_to_mcap "${cpp_typesupport_target}")
