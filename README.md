@@ -75,7 +75,7 @@ Follow the native installation guide from the official [Voyant SDK Documentation
 
 ```bash
 source /opt/ros/humble/setup.bash # source ROS2 Humble
-colcon build --symlink-install --packages-select voyant-ros
+colcon build --symlink-install --packages-select voyant_ros
 ```
 
 ## Running the package
@@ -87,12 +87,12 @@ source install/setup.bash
 
 ### 2. Launch the driver
 ```bash
-ros2 launch voyant-ros sensor_launch.py
+ros2 launch voyant_ros sensor_launch.py
 ```
 or with RViz visualization
 
 ```bash
-ros2 launch voyant-ros sensor_launch.py use_rviz:=true # for rviz
+ros2 launch voyant_ros sensor_launch.py use_rviz:=true # for rviz
 ```
 
 ## Converting `.bin` files to ROS2 bag format
@@ -100,7 +100,7 @@ The configurations for ROS2 bag can be found in `config/sensor_params.yaml` file
 
 ### 1. Using the binaries from `colcon build`
 
-If you have already build the `voyant-ros` package using `colcon`, use the binary files as below.
+If you have already build the `voyant_ros` package using `colcon`, use the binary files as below.
 ```bash
 cd ~/ros2_ws/build/voyant-ros
 ./bin/voyant_bin_to_mcap ros2_ws/src/voyant-ros/config/sensor_params.yaml # path to your params yaml file

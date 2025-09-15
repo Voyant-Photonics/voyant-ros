@@ -1,4 +1,4 @@
-# [WIP] voyant-ros debian
+# [WIP] voyant_ros debian
 
 ## Setup
 
@@ -125,7 +125,7 @@ sudo make install
 > 2. Compile Cap'n proto into a debian or host as an apt package
 > 3. Remove the Cap'n Proto dependency from the API
 
-Install the debians:
+Install the debian's:
 
 ```bash
 apt update
