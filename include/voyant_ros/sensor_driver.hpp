@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include "voyant_ros/msg/voyant_device_metadata.hpp"
 #include <chrono>
 #include <iostream>
 #include <pcl/point_cloud.h>
@@ -108,6 +109,7 @@ private:
 
   // ROS components
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr points_pub;
+  rclcpp::Publisher<voyant_ros::msg::VoyantDeviceMetadata>::SharedPtr metadata_pub;
 
   // Voyant client
   std::shared_ptr<VoyantClient> client_;

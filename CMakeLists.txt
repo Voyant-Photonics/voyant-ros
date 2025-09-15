@@ -29,6 +29,8 @@ find_package(pcl_conversions REQUIRED)
 find_package(voyant-api REQUIRED PATHS /usr/lib/cmake/voyant-api)
 find_package(rosbag2_cpp REQUIRED)
 find_package(yaml-cpp REQUIRED)
+find_package(rosidl_default_generators REQUIRED)
+find_package(std_msgs REQUIRED)
 
 # ==============================
 # Compiler Options
@@ -42,6 +44,14 @@ add_compile_options(-Wall -Wextra)
 # ==============================
 include_directories(${PCL_INCLUDE_DIRS} include)
 link_directories(${PCL_LIBRARY_DIRS})
+
+# ==============================
+# Define custom messages
+# ==============================
+rosidl_generate_interfaces(${PROJECT_NAME}
+  "msg/VoyantDeviceMetadata.msg"
+  DEPENDENCIES std_msgs
+)
 
 # ==============================
 # Executables & Link libraries
@@ -78,6 +88,11 @@ ament_target_dependencies(voyant_bin_to_mcap
   sensor_msgs
   pcl_conversions
 )
+
+# Link against the generated interfaces (if needed by executables)
+rosidl_get_typesupport_target(cpp_typesupport_target ${PROJECT_NAME} "rosidl_typesupport_cpp")
+target_link_libraries(voyant_sensor_node "${cpp_typesupport_target}")
+target_link_libraries(voyant_bin_to_mcap "${cpp_typesupport_target}")
 
 # ==============================
 # Install Targets
