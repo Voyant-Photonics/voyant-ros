@@ -18,6 +18,15 @@ VoyantSensorDriver::VoyantSensorDriver()
   // file, but you can always remap the topic name or visualize the point cloud using different
   // config file in Foxglove or RViz.
   points_pub = this->create_publisher<sensor_msgs::msg::PointCloud2>("point_cloud", 100);
+
+  // Latched publisher for static metadata
+  auto metadata_qos = rclcpp::QoS(rclcpp::KeepLast(1))
+                          .durability(rclcpp::DurabilityPolicy::TransientLocal)
+                          .reliability(rclcpp::ReliabilityPolicy::Reliable);
+
+  metadata_pub =
+      this->create_publisher<voyant_ros::msg::VoyantDeviceMetadata>("device_metadata", metadata_qos);
+
   publishPointCloud();
 }
 
@@ -89,6 +98,7 @@ sensor_msgs::msg::PointCloud2 VoyantSensorDriver::pointDatatoRosMsg(VoyantFrameW
 
 void VoyantSensorDriver::publishPointCloud()
 {
+  bool published_metadata = false;
   while(rclcpp::ok() && !client_->isTerminated())
   {
     bool frame_received = false;
@@ -100,6 +110,24 @@ void VoyantSensorDriver::publishPointCloud()
         sensor_msgs::msg::PointCloud2 cloud_msg = this->pointDatatoRosMsg(frame);
         points_pub->publish(cloud_msg);
         frame_received = true;
+        if(!published_metadata)
+        {
+          // Create and publish static metadata message
+          voyant_ros::msg::VoyantDeviceMetadata metadata;
+          metadata.header.stamp = this->now();
+          metadata.header.frame_id = config_.lidar_frame_id;
+          metadata.device_id = frame.header().deviceId();
+          metadata.proto_version_hash = frame.header().protoVersion().toU32Hash();
+          metadata.api_version_hash = frame.header().apiVersion().toU32Hash();
+          metadata.firmware_version_hash = frame.header().firmwareVersion().toU32Hash();
+          metadata.hdl_version_hash = frame.header().hdlVersion().toU32Hash();
+
+          metadata_pub->publish(metadata);
+          RCLCPP_INFO(get_logger(),
+                      "Published static metadata for device: %s",
+                      metadata.device_id.c_str());
+          published_metadata = true;
+        }
       }
     }
     catch(const std::exception &e)
