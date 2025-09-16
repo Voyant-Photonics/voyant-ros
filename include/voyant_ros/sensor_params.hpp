@@ -40,4 +40,25 @@ struct SensorParams
   std::string interface_address;
   PointFormat point_format = PointFormat::UNKNOWN;
 };
+
+/**
+ * @brief Convert PointFormat enum to string representation
+ * @param format The point format enum value
+ * @return String representation of the format
+ */
+inline std::string pointFormatToString(PointFormat format)
+{
+  switch(format)
+  {
+    case PointFormat::MDL_STANDARD:
+      return "MDL_STANDARD";
+    case PointFormat::MDL_EXTENDED:
+      return "MDL_EXTENDED";
+    case PointFormat::UNKNOWN:
+      return "UNKNOWN";
+    default:
+      return "INVALID(" + std::to_string(static_cast<int>(format)) + ")";
+  }
+}
+
 } // namespace voyant_ros

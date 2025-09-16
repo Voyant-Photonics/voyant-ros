@@ -67,6 +67,9 @@ void VoyantSensorDriver::initialize()
   try
   {
     RCLCPP_INFO(get_logger(), "[+] Connecting to sensor: %s", config_.binding_address.c_str());
+    RCLCPP_INFO(get_logger(),
+                "[+] Using point format: %s",
+                pointFormatToString(config_.point_format).c_str());
     client_ = std::make_shared<VoyantClient>(config_.binding_address,
                                              config_.multicast_group,
                                              config_.interface_address);
@@ -84,21 +87,6 @@ void VoyantSensorDriver::initialize()
         VoyantFrameWrapper &frame = client_->latestFrame();
         const VoyantHeaderWrapper header_msg = frame.header();
         RCLCPP_INFO(get_logger(), "[+] Connected to sensor: %s", header_msg.deviceId().c_str());
-
-        // Log the point format being used
-        std::string format_name = "UNKNOWN";
-        switch(config_.point_format)
-        {
-          case PointFormat::MDL_STANDARD:
-            format_name = "MDL_STANDARD";
-            break;
-          case PointFormat::MDL_EXTENDED:
-            format_name = "MDL_EXTENDED";
-            break;
-          default:
-            break;
-        }
-        RCLCPP_INFO(get_logger(), "[+] Using point format: %s", format_name.c_str());
 
         return; // Successful connection
       }
