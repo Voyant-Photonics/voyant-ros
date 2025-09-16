@@ -12,7 +12,6 @@
 #include <string>
 #include <voyant_frame_wrapper.hpp>
 #include <voyant_playback.hpp>
-#include <yaml-cpp/yaml.h>
 
 namespace voyant_ros
 {

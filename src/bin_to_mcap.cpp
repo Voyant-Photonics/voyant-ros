@@ -4,6 +4,7 @@
 // See the LICENSE file in the repository root for full license text.
 
 #include "voyant_ros/bin_to_mcap.hpp"
+#include <yaml-cpp/yaml.h>
 
 namespace voyant_ros
 {
