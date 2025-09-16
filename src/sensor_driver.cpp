@@ -45,8 +45,9 @@ void VoyantSensorDriver::getParams()
   this->declare_parameter<std::string>("multicast_group", "224.0.0.0");
   this->declare_parameter<std::string>("interface_address", "127.0.0.1");
   this->declare_parameter<bool>("spn_filter", true);
-  this->declare_parameter<int>("timestamp_mode", 0);
+  this->declare_parameter<int>("timestamp_mode", 0); // Default to TIME_FROM_SENSOR (0)
   this->declare_parameter<std::string>("frame_id", "lidar_sensor");
+  this->declare_parameter<int>("point_format", 1); // Default to MDL_STANDARD (1)
 
   config_.binding_address = this->get_parameter("binding_address").as_string();
   config_.multicast_group = this->get_parameter("multicast_group").as_string();
@@ -54,6 +55,7 @@ void VoyantSensorDriver::getParams()
   config_.valid_only_filter = this->get_parameter("spn_filter").as_bool();
   config_.timestamp_mode = this->get_parameter("timestamp_mode").as_int();
   config_.lidar_frame_id = this->get_parameter("frame_id").as_string();
+  config_.point_format = static_cast<PointFormat>(this->get_parameter("point_format").as_int());
 }
 
 void VoyantSensorDriver::initialize()
@@ -82,6 +84,22 @@ void VoyantSensorDriver::initialize()
         VoyantFrameWrapper &frame = client_->latestFrame();
         const VoyantHeaderWrapper header_msg = frame.header();
         RCLCPP_INFO(get_logger(), "[+] Connected to sensor: %s", header_msg.deviceId().c_str());
+
+        // Log the point format being used
+        std::string format_name = "UNKNOWN";
+        switch(config_.point_format)
+        {
+          case PointFormat::MDL_STANDARD:
+            format_name = "MDL_STANDARD";
+            break;
+          case PointFormat::MDL_EXTENDED:
+            format_name = "MDL_EXTENDED";
+            break;
+          default:
+            break;
+        }
+        RCLCPP_INFO(get_logger(), "[+] Using point format: %s", format_name.c_str());
+
         return; // Successful connection
       }
     }
@@ -95,7 +113,7 @@ void VoyantSensorDriver::initialize()
 
 sensor_msgs::msg::PointCloud2 VoyantSensorDriver::pointDatatoRosMsg(VoyantFrameWrapper &frame)
 {
-  return convertFrameToPointCloud2<VoyantPoint>(frame, config_);
+  return convertFrameByFormat(frame, config_);
 }
 
 void VoyantSensorDriver::publishPointCloud()

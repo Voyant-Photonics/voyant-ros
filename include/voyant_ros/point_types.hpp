@@ -40,7 +40,7 @@ struct EIGEN_ALIGN16 VoyantPoint
 
 /**
  * @brief Extended point structure with additional sensor fields from MDL sensors
- * Uses composition instead of inheritance to avoid PCL registration warnings
+ * This (with the VoyantDeviceMetadata msg) can be used to reconstruct Voyant v0.3.0 binary logs
  */
 struct EIGEN_ALIGN16 VoyantPointMdlExtended
 {

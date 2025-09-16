@@ -23,7 +23,7 @@ enum class TimestampMode
 enum class PointFormat
 {
   UNKNOWN = 0,
-  BASIC = 1,
+  MDL_STANDARD = 1,
   MDL_EXTENDED = 2,
 };
 
@@ -58,7 +58,7 @@ inline void fillPointFromFrame(PointT &point, const PointDataWrapper &p, const V
 }
 
 /**
- * @brief Specialization for basic VoyantPoint
+ * @brief Specialization for Standard MDL VoyantPoint
  */
 template <>
 inline void fillPointFromFrame<VoyantPoint>(VoyantPoint &point,
@@ -159,7 +159,7 @@ inline sensor_msgs::msg::PointCloud2 convertFrameByFormat(const VoyantFrameWrapp
 {
   switch(config.point_format)
   {
-    case PointFormat::BASIC:
+    case PointFormat::MDL_STANDARD:
       return convertFrameToPointCloud2<VoyantPoint>(frame, config);
 
     case PointFormat::MDL_EXTENDED:
