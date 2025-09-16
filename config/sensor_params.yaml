@@ -5,7 +5,8 @@
 
 /**:
   ros__parameters:
-    ## These are the standard parameters for local testing in loopback mode:
+    ## Live node parameters
+    # These are the standard parameters for local testing in loopback mode:
     # - "0.0.0.0:4444": Local binding address and port
     # - "224.0.0.0": Multicast group address
     # - "127.0.0.1": Interface address (localhost/loopback)
