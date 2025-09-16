@@ -5,6 +5,9 @@
 
 #include "voyant_ros/bin_to_mcap.hpp"
 
+namespace voyant_ros
+{
+
 Bin2Mcap::Bin2Mcap(const std::string &yaml_path)
 {
   // Load the params from the yaml file
@@ -48,3 +51,4 @@ sensor_msgs::msg::PointCloud2 Bin2Mcap::pointDatatoRosMsg(const VoyantFrameWrapp
 {
   return convertFrameToPointCloud2<VoyantPoint>(frame, this->config);
 }
+} // namespace voyant_ros

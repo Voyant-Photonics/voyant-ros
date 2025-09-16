@@ -5,8 +5,10 @@
 
 #include "voyant_ros/sensor_driver.hpp"
 #include <chrono>
-#include <pcl_conversions/pcl_conversions.h>
 #include <thread>
+
+namespace voyant_ros
+{
 
 VoyantSensorDriver::VoyantSensorDriver()
     : Node("voyant_sensor_node")
@@ -93,7 +95,7 @@ void VoyantSensorDriver::initialize()
 
 sensor_msgs::msg::PointCloud2 VoyantSensorDriver::pointDatatoRosMsg(VoyantFrameWrapper &frame)
 {
-  return convertFrameToPointCloud2<VoyantPoint>(frame, this->config_);
+  return convertFrameToPointCloud2<VoyantPoint>(frame, config_);
 }
 
 void VoyantSensorDriver::publishPointCloud()
@@ -139,3 +141,5 @@ void VoyantSensorDriver::publishPointCloud()
     std::this_thread::sleep_for(std::chrono::milliseconds(frame_received ? 1 : 10));
   }
 }
+
+} // namespace voyant_ros

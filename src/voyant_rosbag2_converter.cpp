@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
   const std::string yaml_file_path = argv[1]; // yaml_file
 
   // Initialize LiDAR converter
-  Bin2Mcap converter(yaml_file_path);
+  voyant_ros::Bin2Mcap converter(yaml_file_path);
 
   // Create the playback instance
   VoyantPlayback player;
