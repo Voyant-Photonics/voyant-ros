@@ -66,10 +66,20 @@ target_link_libraries(voyant_sensor_node
 add_executable(voyant_bin_to_mcap src/bin_to_mcap.cpp src/voyant_bin_to_mcap.cpp)
 target_link_libraries(voyant_bin_to_mcap
   voyant-api::voyant-api
-  yaml-cpp
   ${PCL_LIBRARIES}
 )
 set_target_properties(voyant_bin_to_mcap
+  PROPERTIES
+  RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+)
+
+# ======= mcap2bin converter =======
+add_executable(voyant_mcap_to_bin src/mcap_to_bin.cpp src/voyant_mcap_to_bin.cpp)
+target_link_libraries(voyant_mcap_to_bin
+  voyant-api::voyant-api
+  ${PCL_LIBRARIES}
+)
+set_target_properties(voyant_mcap_to_bin
   PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
 )
@@ -89,12 +99,19 @@ ament_target_dependencies(voyant_bin_to_mcap
   pcl_conversions
 )
 
+ament_target_dependencies(voyant_mcap_to_bin
+  rclcpp
+  rosbag2_cpp
+  sensor_msgs
+)
+
 # ==============================
 # Link Custom Message Interfaces
 # ==============================
 rosidl_get_typesupport_target(cpp_typesupport_target ${PROJECT_NAME} "rosidl_typesupport_cpp")
 target_link_libraries(voyant_sensor_node "${cpp_typesupport_target}")
 target_link_libraries(voyant_bin_to_mcap "${cpp_typesupport_target}")
+target_link_libraries(voyant_mcap_to_bin "${cpp_typesupport_target}")
 
 # ==============================
 # Install Targets
@@ -102,6 +119,7 @@ target_link_libraries(voyant_bin_to_mcap "${cpp_typesupport_target}")
 install(TARGETS
   voyant_sensor_node
   voyant_bin_to_mcap
+  voyant_mcap_to_bin
   DESTINATION lib/${PROJECT_NAME}
 )
 install(
