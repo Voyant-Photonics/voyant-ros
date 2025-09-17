@@ -7,6 +7,7 @@
 #include "voyant_ros/conversion_utils.hpp"
 #include <iomanip>
 #include <iostream>
+#include <voyant_data_recorder.hpp>
 #include <yaml-cpp/yaml.h>
 
 namespace voyant_ros
@@ -149,12 +150,25 @@ bool McapPlayback::processFrames()
     std::cerr << "Do not process frames without first validating" << std::endl;
     return false;
   }
+
+  // Create recorder with (mostly) default configuration
+  VoyantRecorderConfig recorder_config(config_.bin_output);
+  recorder_config.timestampFilename = false; // Turn time-stamping the filename off
+  VoyantRecorder recorder(recorder_config);
+
+  if(!recorder.isValid())
+  {
+    std::cerr << "Failed to create VoyantRecorder" << std::endl;
+    return false;
+  }
+
   // Restart from beginning
   openReader();
 
   std::cout << "\nProcessing frames..." << std::endl;
 
   size_t frame_count = 0;
+  size_t recorded_count = 0;
   rclcpp::Serialization<sensor_msgs::msg::PointCloud2> pc_serializer;
 
   // Second pass - process only point cloud frames
@@ -171,21 +185,23 @@ bool McapPlayback::processFrames()
         rclcpp::SerializedMessage serialized_msg(*bag_message->serialized_data);
         pc_serializer.deserialize_message(&serialized_msg, &cloud);
 
-        // Print frame metadata
-        std::cout << "###############" << std::endl;
-        std::cout << "Frame " << frame_count << " | timestamp: " << std::fixed << std::setprecision(3)
-                  << cloud.header.stamp.sec + cloud.header.stamp.nanosec / 1e9 << "s"
-                  << " | points: " << cloud.width * cloud.height << std::endl;
-
-        // Convert PointCloud2 back to VoyantFrameWrapper
+        // Convert PointCloud2 back to VoyantFrameWrapper amd record
         try
         {
           VoyantFrameWrapper frame = convertMdlExtendedPointCloud2ToFrame(cloud, metadata_);
-          std::cout << frame << std::endl;
+
+          RecordResult result = recorder.recordFrame(frame);
+          if(result == RecordResult::Error || result == RecordResult::Unknown)
+          {
+            std::cerr << "\nError recording frame " << frame_count << std::endl;
+            return false;
+          }
+
+          recorded_count++;
         }
         catch(const std::exception &e)
         {
-          std::cerr << "Failed to convert frame " << frame_count
+          std::cerr << "\nFailed to convert frame " << frame_count
                     << " to VoyantFrameWrapper: " << e.what() << std::endl;
           return false;
         }
@@ -200,8 +216,18 @@ bool McapPlayback::processFrames()
     }
   }
 
+  // Finalize recording
+  std::cout << "\nFinalizing recording..." << std::endl;
+  if(!recorder.finalize())
+  {
+    std::cerr << "Failed to finalize VoyantRecorder" << std::endl;
+    return false;
+  }
+
   std::cout << "\nProcessed " << frame_count << " frames" << std::endl;
-  std::cout << "Output will be saved at: " << config_.bin_output << std::endl;
+  std::cout << "Successfully recorded " << recorded_count << " frames" << std::endl;
+  std::cout << "Output saved to: " << config_.bin_output << std::endl;
+
   return true;
 }
 
