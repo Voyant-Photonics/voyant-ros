@@ -59,7 +59,7 @@ private:
   bool validated_;
 
   void openReader();
-  bool is_voyant_extended_format(const sensor_msgs::msg::PointCloud2 &cloud);
+  bool contains_valid_format(const sensor_msgs::msg::PointCloud2 &cloud);
 };
 
 /**

@@ -100,7 +100,7 @@ bool McapPlayback::validate()
         rclcpp::SerializedMessage serialized_msg(*bag_message->serialized_data);
         pc_serializer.deserialize_message(&serialized_msg, &cloud);
 
-        if(is_voyant_extended_format(cloud))
+        if(contains_valid_format(cloud))
         {
           first_frame_validated = true;
           std::cout << "✓ First frame is VoyantPointMdlExtended format ("
@@ -193,25 +193,42 @@ bool McapPlayback::processFrames()
   return true;
 }
 
-bool McapPlayback::is_voyant_extended_format(const sensor_msgs::msg::PointCloud2 &cloud)
+bool McapPlayback::contains_valid_format(const sensor_msgs::msg::PointCloud2 &cloud)
 {
-  // Check for VoyantPointMdlExtended format - look for the key extended fields
-  bool has_calibrated_reflectance = false;
-  bool has_frame_index = false;
+  // Define all required fields for conversion to bin
+  std::set<std::string> required_fields = {"x",
+                                           "y",
+                                           "z",
+                                           "v",
+                                           "snr",
+                                           "drop_reason",
+                                           "timestamp_nsecs",
+                                           "point_idx",
+                                           "calibrated_reflectance",
+                                           "noise_mean_estimate",
+                                           "min_ramp_snr",
+                                           "frame_index"};
 
+  std::set<std::string> found_fields;
+
+  // Collect all field names from the point cloud
   for(const auto &field : cloud.fields)
   {
-    if(field.name == "calibrated_reflectance")
+    found_fields.insert(field.name);
+  }
+
+  // Check if all required fields are present
+  bool missing_field = false;
+  for(const auto &required_field : required_fields)
+  {
+    if(found_fields.find(required_field) == found_fields.end())
     {
-      has_calibrated_reflectance = true;
-    }
-    else if(field.name == "frame_index")
-    {
-      has_frame_index = true;
+      missing_field = true;
+      std::cout << "PointCloud missing required field: " << required_field << std::endl;
     }
   }
 
-  return has_calibrated_reflectance && has_frame_index;
+  return !missing_field;
 }
 
 } // namespace voyant_ros
