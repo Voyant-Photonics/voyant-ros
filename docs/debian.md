@@ -82,7 +82,7 @@ sudo dpkg -i ros-humble-voyant-ros*.deb
 
 ```bash
 source /opt/ros/humble/setup.bash
-ros2 run voyant-ros voyant_sensor_node
+ros2 run voyant_ros voyant_sensor_node
 ```
 
 Visualize in another terminal
