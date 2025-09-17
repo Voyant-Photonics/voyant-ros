@@ -5,5 +5,5 @@
 
 # These parameters are used in the MCAP -> voyant .bin conversion
 
-mcap_input: '' # Path to your bin file
+mcap_input: '' # Path to your input file
 bin_output: '' # Desired output path
