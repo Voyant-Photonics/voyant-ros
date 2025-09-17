@@ -5,8 +5,10 @@
 
 #include "voyant_ros/sensor_driver.hpp"
 #include <chrono>
-#include <pcl_conversions/pcl_conversions.h>
 #include <thread>
+
+namespace voyant_ros
+{
 
 VoyantSensorDriver::VoyantSensorDriver()
     : Node("voyant_sensor_node")
@@ -43,8 +45,9 @@ void VoyantSensorDriver::getParams()
   this->declare_parameter<std::string>("multicast_group", "224.0.0.0");
   this->declare_parameter<std::string>("interface_address", "127.0.0.1");
   this->declare_parameter<bool>("spn_filter", true);
-  this->declare_parameter<int>("timestamp_mode", 0);
+  this->declare_parameter<int>("timestamp_mode", 0); // Default to TIME_FROM_SENSOR (0)
   this->declare_parameter<std::string>("frame_id", "lidar_sensor");
+  this->declare_parameter<int>("point_format", 1); // Default to MDL_STANDARD (1)
 
   config_.binding_address = this->get_parameter("binding_address").as_string();
   config_.multicast_group = this->get_parameter("multicast_group").as_string();
@@ -52,6 +55,7 @@ void VoyantSensorDriver::getParams()
   config_.valid_only_filter = this->get_parameter("spn_filter").as_bool();
   config_.timestamp_mode = this->get_parameter("timestamp_mode").as_int();
   config_.lidar_frame_id = this->get_parameter("frame_id").as_string();
+  config_.point_format = static_cast<PointFormat>(this->get_parameter("point_format").as_int());
 }
 
 void VoyantSensorDriver::initialize()
@@ -63,6 +67,9 @@ void VoyantSensorDriver::initialize()
   try
   {
     RCLCPP_INFO(get_logger(), "[+] Connecting to sensor: %s", config_.binding_address.c_str());
+    RCLCPP_INFO(get_logger(),
+                "[+] Using point format: %s",
+                pointFormatToString(config_.point_format).c_str());
     client_ = std::make_shared<VoyantClient>(config_.binding_address,
                                              config_.multicast_group,
                                              config_.interface_address);
@@ -80,6 +87,7 @@ void VoyantSensorDriver::initialize()
         VoyantFrameWrapper &frame = client_->latestFrame();
         const VoyantHeaderWrapper header_msg = frame.header();
         RCLCPP_INFO(get_logger(), "[+] Connected to sensor: %s", header_msg.deviceId().c_str());
+
         return; // Successful connection
       }
     }
@@ -93,7 +101,7 @@ void VoyantSensorDriver::initialize()
 
 sensor_msgs::msg::PointCloud2 VoyantSensorDriver::pointDatatoRosMsg(VoyantFrameWrapper &frame)
 {
-  return convertFrameToPointCloud2<VoyantPoint>(frame, this->config_);
+  return convertFrameByFormat(frame, config_);
 }
 
 void VoyantSensorDriver::publishPointCloud()
@@ -139,3 +147,5 @@ void VoyantSensorDriver::publishPointCloud()
     std::this_thread::sleep_for(std::chrono::milliseconds(frame_received ? 1 : 10));
   }
 }
+
+} // namespace voyant_ros

@@ -5,14 +5,16 @@
 
 #pragma once
 
-#include "voyant_ros/sensor_driver.hpp"
+#include "voyant_ros/conversion_utils.hpp"
 #include <iomanip>
 #include <rosbag2_cpp/writer.hpp>
 #include <rosbag2_storage/storage_options.hpp>
 #include <string>
 #include <voyant_frame_wrapper.hpp>
 #include <voyant_playback.hpp>
-#include <yaml-cpp/yaml.h>
+
+namespace voyant_ros
+{
 
 /**
  * @class Bin2Mcap
@@ -39,6 +41,12 @@ public:
    */
   sensor_msgs::msg::PointCloud2 pointDatatoRosMsg(const VoyantFrameWrapper frame);
 
+  /**
+   * @brief Load conversion parameters from YAML file
+   */
   SensorParams load_conversion_params(const std::string &yaml_path);
+
   SensorParams config;
 };
+
+} // namespace voyant_ros

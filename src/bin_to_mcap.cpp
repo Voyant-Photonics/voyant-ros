@@ -4,6 +4,10 @@
 // See the LICENSE file in the repository root for full license text.
 
 #include "voyant_ros/bin_to_mcap.hpp"
+#include <yaml-cpp/yaml.h>
+
+namespace voyant_ros
+{
 
 Bin2Mcap::Bin2Mcap(const std::string &yaml_path)
 {
@@ -34,6 +38,7 @@ SensorParams Bin2Mcap::load_conversion_params(const std::string &yaml_path)
     params.storage_id = sensor_config["storage_id"].as<std::string>();
     params.serialization_format = sensor_config["serialization_format"].as<std::string>();
     params.topic_name = sensor_config["topic_name"].as<std::string>();
+    params.point_format = static_cast<PointFormat>(sensor_config["point_format"].as<int>());
   }
   catch(const std::exception &e)
   {
@@ -46,5 +51,6 @@ SensorParams Bin2Mcap::load_conversion_params(const std::string &yaml_path)
 
 sensor_msgs::msg::PointCloud2 Bin2Mcap::pointDatatoRosMsg(const VoyantFrameWrapper frame)
 {
-  return convertFrameToPointCloud2<VoyantPoint>(frame, this->config);
+  return convertFrameByFormat(frame, config);
 }
+} // namespace voyant_ros
