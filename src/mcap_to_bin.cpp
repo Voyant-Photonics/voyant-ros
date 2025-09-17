@@ -105,12 +105,12 @@ bool McapPlayback::validate()
         if(contains_valid_format(cloud))
         {
           first_frame_validated = true;
-          std::cout << "✓ First frame is VoyantPointMdlExtended format ("
-                    << cloud.width * cloud.height << " points)" << std::endl;
+          std::cout << "✓ First frame contains a valid point format (" << cloud.width * cloud.height
+                    << " points)" << std::endl;
         }
         else
         {
-          std::cerr << "✗ First frame is not VoyantPointMdlExtended format" << std::endl;
+          std::cerr << "✗ First frame does not contain a valid point format" << std::endl;
           return false;
         }
       }
