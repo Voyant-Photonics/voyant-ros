@@ -41,8 +41,9 @@ public:
 
   /**
    * @brief Second pass - restart from beginning and process all frames
+   * @return true if processing / conversion passed, false otherwise
    */
-  void processFrames();
+  bool processFrames();
 
   /**
    * @brief Get the found metadata
@@ -55,6 +56,7 @@ private:
   rosbag2_storage::StorageOptions storage_options_;
   rosbag2_cpp::ConverterOptions converter_options_;
   voyant_ros::msg::VoyantDeviceMetadata metadata_;
+  bool validated_;
 
   void openReader();
   bool is_voyant_extended_format(const sensor_msgs::msg::PointCloud2 &cloud);

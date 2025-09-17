@@ -31,7 +31,8 @@ McapConfig load_config(const std::string &yaml_path)
 }
 
 McapPlayback::McapPlayback(const McapConfig &config)
-    : config_(config)
+    : config_(config),
+      validated_(false)
 {
   storage_options_.uri = config_.mcap_input;
   storage_options_.storage_id = "mcap";
@@ -132,6 +133,7 @@ bool McapPlayback::validate()
   }
 
   std::cout << "✓ Validation complete" << std::endl;
+  validated_ = true;
 
   // Close reader after validation
   reader_.reset();
@@ -139,8 +141,13 @@ bool McapPlayback::validate()
   return true;
 }
 
-void McapPlayback::processFrames()
+bool McapPlayback::processFrames()
 {
+  if(!validated_)
+  {
+    std::cerr << "Do not process frames without first validating" << std::endl;
+    return false;
+  }
   // Restart from beginning
   openReader();
 
@@ -176,12 +183,14 @@ void McapPlayback::processFrames()
       catch(const std::exception &e)
       {
         std::cerr << "Failed to parse frame " << frame_count << ": " << e.what() << std::endl;
+        return false;
       }
     }
   }
 
   std::cout << "\nProcessed " << frame_count << " frames" << std::endl;
   std::cout << "Output will be saved at: " << config_.bin_output << std::endl;
+  return true;
 }
 
 bool McapPlayback::is_voyant_extended_format(const sensor_msgs::msg::PointCloud2 &cloud)

@@ -34,7 +34,11 @@ int main(int argc, char *argv[])
   }
 
   // Phase 2: Process all frames (restarts from beginning)
-  playback.processFrames();
+  if(!playback.processFrames())
+  {
+    std::cerr << "MCAP frame processing failed" << std::endl;
+    return EXIT_FAILURE;
+  }
 
   std::cout << "\nConversion complete!" << std::endl;
   return EXIT_SUCCESS;
