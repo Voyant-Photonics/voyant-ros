@@ -4,6 +4,7 @@
 // See the LICENSE file in the repository root for full license text.
 
 #include "voyant_ros/mcap_to_bin.hpp"
+#include "voyant_ros/conversion_utils.hpp"
 #include <iomanip>
 #include <iostream>
 #include <yaml-cpp/yaml.h>
@@ -176,7 +177,18 @@ bool McapPlayback::processFrames()
                   << cloud.header.stamp.sec + cloud.header.stamp.nanosec / 1e9 << "s"
                   << " | points: " << cloud.width * cloud.height << std::endl;
 
-        // TODO: Add conversion logic here
+        // Convert PointCloud2 back to VoyantFrameWrapper
+        try
+        {
+          VoyantFrameWrapper frame = convertMdlExtendedPointCloud2ToFrame(cloud, metadata_);
+          std::cout << frame << std::endl;
+        }
+        catch(const std::exception &e)
+        {
+          std::cerr << "Failed to convert frame " << frame_count
+                    << " to VoyantFrameWrapper: " << e.what() << std::endl;
+          return false;
+        }
 
         frame_count++;
       }

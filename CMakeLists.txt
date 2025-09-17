@@ -100,6 +100,7 @@ ament_target_dependencies(voyant_bin_to_mcap
 )
 
 ament_target_dependencies(voyant_mcap_to_bin
+  pcl_conversions
   rclcpp
   rosbag2_cpp
   sensor_msgs
