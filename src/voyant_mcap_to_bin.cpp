@@ -5,6 +5,7 @@
 
 #include "voyant_ros/mcap_to_bin.hpp"
 #include <iostream>
+#include <logging_utils.hpp>
 
 int main(int argc, char *argv[])
 {
@@ -13,6 +14,9 @@ int main(int argc, char *argv[])
     std::cerr << "Usage: " << argv[0] << " <input_yaml_file_path>\n";
     return EXIT_FAILURE;
   }
+
+  // Initialize API internal logging
+  voyant_log_init_c();
 
   // Load configuration
   auto config = voyant_ros::load_config(argv[1]);

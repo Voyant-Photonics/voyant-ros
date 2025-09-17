@@ -5,6 +5,7 @@
 // See the LICENSE file in the repository root for full license text.
 
 #include "voyant_ros/bin_to_mcap.hpp"
+#include <logging_utils.hpp>
 
 int main(int argc, char *argv[])
 {
@@ -13,6 +14,9 @@ int main(int argc, char *argv[])
     std::cerr << "Usage: " << argv[0] << " <input_yaml_file_path>\n";
     return EXIT_FAILURE;
   }
+
+  // Initialize API internal logging
+  voyant_log_init_c();
 
   const std::string yaml_file_path = argv[1]; // yaml_file
 
