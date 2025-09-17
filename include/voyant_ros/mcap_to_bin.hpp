@@ -6,7 +6,7 @@
 #pragma once
 
 #include "voyant_ros/msg/voyant_device_metadata.hpp"
-#include <iomanip>
+#include <memory>
 #include <rosbag2_cpp/reader.hpp>
 #include <rosbag2_storage/storage_options.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
@@ -25,33 +25,44 @@ struct McapConfig
 };
 
 /**
- * @class Mcap2Bin
- * @brief Offline .mcap to .bin converter
+ * @brief MCAP playback manager for two-phase processing
  */
-class Mcap2Bin
+class McapPlayback
 {
 public:
-  /**
-   * @brief Construct a new Mcap to bin object
-   */
-  Mcap2Bin(const std::string &yaml_path);
+  McapPlayback(const McapConfig &config);
+  ~McapPlayback() = default;
 
   /**
-   * @brief Destroy the Mcap to bin object
+   * @brief First pass - validate metadata and first frame format
+   * @return true if validation passed, false otherwise
    */
-  ~Mcap2Bin();
+  bool validate();
 
   /**
-   * @brief Validate that point cloud contains VoyantPointMdlExtended format
+   * @brief Second pass - restart from beginning and process all frames
    */
-  bool validatePointCloudFormat(const sensor_msgs::msg::PointCloud2 &cloud);
+  void processFrames();
 
   /**
-   * @brief Load conversion parameters from YAML file
+   * @brief Get the found metadata
    */
-  McapConfig load_conversion_params(const std::string &yaml_path);
+  const voyant_ros::msg::VoyantDeviceMetadata &getMetadata() const { return metadata_; }
 
-  McapConfig config;
+private:
+  McapConfig config_;
+  std::unique_ptr<rosbag2_cpp::Reader> reader_;
+  rosbag2_storage::StorageOptions storage_options_;
+  rosbag2_cpp::ConverterOptions converter_options_;
+  voyant_ros::msg::VoyantDeviceMetadata metadata_;
+
+  void openReader();
+  bool is_voyant_extended_format(const sensor_msgs::msg::PointCloud2 &cloud);
 };
+
+/**
+ * @brief Load conversion parameters from YAML file
+ */
+McapConfig load_config(const std::string &yaml_path);
 
 } // namespace voyant_ros
