@@ -63,7 +63,7 @@ target_link_libraries(voyant_sensor_node
 )
 
 # ======= bin2mcap converter =======
-add_executable(voyant_bin_to_mcap src/bin_to_mcap.cpp src/voyant_rosbag2_converter.cpp)
+add_executable(voyant_bin_to_mcap src/bin_to_mcap.cpp src/voyant_bin_to_mcap.cpp)
 target_link_libraries(voyant_bin_to_mcap
   voyant-api::voyant-api
   yaml-cpp
