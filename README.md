@@ -96,11 +96,13 @@ ros2 launch voyant_ros sensor_launch.py use_rviz:=true # for rviz
 ```
 
 ## Converting `.bin` files to ROS2 bag format
+
 The configurations for ROS2 bag can be found in `config/sensor_params.yaml` file. There are two ways you can run use the conversion tool.
 
 ### 1. Using the binaries from `colcon build`
 
 If you have already build the `voyant_ros` package using `colcon`, use the binary files as below.
+
 ```bash
 cd ~/ros2_ws/build/voyant-ros
 ./bin/voyant_bin_to_mcap ros2_ws/src/voyant-ros/config/sensor_params.yaml # path to your params yaml file
@@ -115,6 +117,32 @@ cd build
 cmake ..
 make
 ./bin/voyant_bin_to_mcap ros2_ws/src/voyant-ros/config/sensor_params.yaml # path to your params yaml file
+```
+
+## Converting mcap files to bin format
+
+You can only convert MCAP files with the correct data.
+
+> At time of writing, that means you will need to record the `/device_metadata` field and
+> to use `point_format: 2 # MDL_EXTENDED` when recording.
+
+**Build the tool:**
+
+```bash
+# source ROS2 Humble
+source /opt/ros/humble/setup.bash
+# build with colcon
+colcon build --symlink-install --packages-select voyant_ros
+# Source the workspace (required for compiled VoyantDeviceMetadata.msg)
+source install/setup.bash
+```
+
+Edit the `yaml` config file to pass the correct file paths.
+
+**Run the tool:**
+
+```bash
+./build/voyant_ros/bin/voyant_mcap_to_bin config/mcap_to_bin_params.yaml
 ```
 
 ## Configuring Foxglove for Pointcloud Visualization
