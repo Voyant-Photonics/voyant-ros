@@ -14,13 +14,13 @@
   <depend>pcl_ros</depend>
   <depend>pcl_conversions</depend>
   <depend>rosbag2_cpp</depend>
+  <depend>voyant-api</depend>
 
   <build_depend>libpcl-all-dev</build_depend>
   <build_depend>rosidl_default_generators</build_depend>
 
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
-  <exec_depend>voyant-api</exec_depend>
   <exec_depend>rosidl_default_runtime</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
