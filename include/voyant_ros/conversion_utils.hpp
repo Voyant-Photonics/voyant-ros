@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include "voyant_ros/msg/voyant_device_metadata.hpp"
 #include "voyant_ros/point_types.hpp"
 #include "voyant_ros/sensor_params.hpp"
 #include <rclcpp/rclcpp.hpp>
@@ -138,6 +139,89 @@ inline sensor_msgs::msg::PointCloud2 convertFrameByFormat(const VoyantFrameWrapp
     default:
       throw std::runtime_error("Invalid point format");
   }
+}
+
+/**
+ * @brief Convert PointCloud2 back to VoyantFrameWrapper
+ * Template specialization for VoyantPointMdlExtended only
+ * Expect other formats to be supported in the future
+ */
+template <typename PointT>
+VoyantFrameWrapper convertPointCloud2ToFrame(const sensor_msgs::msg::PointCloud2 &cloud,
+                                             const voyant_ros::msg::VoyantDeviceMetadata &metadata)
+{
+  static_assert(
+      std::is_same_v<PointT, VoyantPointMdlExtended>,
+      "Only VoyantPointMdlExtended is currently supported for PointCloud2 to frame conversion");
+
+  // Convert ROS PointCloud2 to PCL
+  pcl::PointCloud<PointT> pcl_cloud;
+  pcl::fromROSMsg(cloud, pcl_cloud);
+
+  VoyantFrameWrapper frame;
+
+  // Setup header from metadata and cloud header
+  VoyantHeaderWrapper &header = frame.headerMut();
+  header.setMessageType(MessageType::VOYANT_FRAME);
+  header.setTimestampSeconds(cloud.header.stamp.sec);
+  header.setTimestampNanoseconds(cloud.header.stamp.nanosec);
+  if(!pcl_cloud.empty())
+  {
+    // We will confirm that all points have the same frame index
+    header.setFrameIndex(pcl_cloud.points[0].frame_index);
+  }
+  else
+  {
+    std::cerr << "Attempting conversion of empty PointCloud2 into VoyantFrame" << std::endl;
+  }
+  header.setDeviceClass(deviceClassFromDeviceId(metadata.device_id));
+  header.setDeviceNumber(deviceNumberFromDeviceId(metadata.device_id));
+  header.protoVersionMut() = VoyantVersionWrapper::fromU32Hash(metadata.proto_version_hash);
+  header.apiVersionMut() = VoyantVersionWrapper::fromU32Hash(metadata.api_version_hash);
+  header.firmwareVersionMut() = VoyantVersionWrapper::fromU32Hash(metadata.firmware_version_hash);
+  header.hdlVersionMut() = VoyantVersionWrapper::fromU32Hash(metadata.hdl_version_hash);
+
+  // Convert points
+  std::vector<PointDataWrapper> &points = frame.pointsMut();
+  points.reserve(pcl_cloud.size());
+
+  for(const auto &pcl_point : pcl_cloud.points)
+  {
+    if(pcl_point.frame_index != header.frameIndex())
+    {
+      std::cerr << "Warning: Skipping point with inconsistent frame_index. Expected: "
+                << header.frameIndex() << ", Found: " << pcl_point.frame_index << std::endl;
+      continue;
+    }
+
+    // Fill point data from PCL point
+    PointDataWrapper point_wrapper;
+    point_wrapper.set_x(pcl_point.x);
+    point_wrapper.set_y(pcl_point.y);
+    point_wrapper.set_z(pcl_point.z);
+    point_wrapper.set_radial_vel(pcl_point.v);
+    point_wrapper.set_snr_linear(pcl_point.snr);
+    point_wrapper.set_drop_reason(static_cast<DropReason>(pcl_point.drop_reason));
+    point_wrapper.set_timestamp_nanosecs(pcl_point.timestamp_nsecs);
+    point_wrapper.set_point_index(pcl_point.point_idx);
+    point_wrapper.set_calibrated_reflectance(pcl_point.calibrated_reflectance);
+    point_wrapper.set_noise_mean_estimate(pcl_point.noise_mean_estimate);
+    point_wrapper.set_min_ramp_snr(pcl_point.min_ramp_snr);
+
+    points.push_back(std::move(point_wrapper));
+  }
+
+  return frame;
+}
+
+/**
+ * @brief Convenience function with explicit template instantiation
+ */
+inline VoyantFrameWrapper convertMdlExtendedPointCloud2ToFrame(
+    const sensor_msgs::msg::PointCloud2 &cloud,
+    const voyant_ros::msg::VoyantDeviceMetadata &metadata)
+{
+  return convertPointCloud2ToFrame<VoyantPointMdlExtended>(cloud, metadata);
 }
 
 } // namespace voyant_ros
