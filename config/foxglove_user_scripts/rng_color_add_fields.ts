@@ -273,7 +273,7 @@ function processROS2PointCloud(
     globalVars: GlobalVariables,
 ) {
     const originalData = data;
-    const newStride = originalStride + (4 * BYTE_SIZE.UINT8); // Adding RGBA fields (4 bytes)
+    const newStride = originalStride + 4 * BYTE_SIZE.UINT8; // Adding RGBA fields (4 bytes)
     const numPoints = Math.floor(originalData.length / originalStride);
     const newSize = numPoints * newStride;
 
@@ -288,7 +288,11 @@ function processROS2PointCloud(
     }
 
     // Map range values to colors
-    const colorValues = mapRangeToRgb(rangeColorMap, rangeValues, globalVars.range_band);
+    const colorValues = mapRangeToRgb(
+        rangeColorMap,
+        rangeValues,
+        globalVars.range_band,
+    );
 
     // Create new data buffer for the output point cloud
     const newPointCloudData = new Uint8Array(newSize);
@@ -300,18 +304,24 @@ function processROS2PointCloud(
 
         // Copy original point data
         newPointCloudData.set(
-            originalData.subarray(originalOffset, originalOffset + originalStride),
-            newOffset
+            originalData.subarray(
+                originalOffset,
+                originalOffset + originalStride,
+            ),
+            newOffset,
         );
 
         // Add color information
         const color = i < colorValues.length ? colorValues[i] : [0, 0, 0];
-        newPointCloudData.set([
-            color[0] || 0,    // Red
-            color[1] || 0,    // Green
-            color[2] || 0,    // Blue
-            ALPHA_MAX         // Alpha (fully opaque)
-        ], newOffset + 48);
+        newPointCloudData.set(
+            [
+                color[0] || 0, // Red
+                color[1] || 0, // Green
+                color[2] || 0, // Blue
+                ALPHA_MAX, // Alpha (fully opaque)
+            ],
+            newOffset + 48,
+        );
     }
 
     // Return the modified point cloud
@@ -352,7 +362,7 @@ function processAPIPointCloud(
 ) {
     // Get the original point cloud data as a Uint8Array
     const { data, point_stride: old_strid } = api_message;
-    const new_strid = old_strid + (4 * BYTE_SIZE.UINT8); // 11 fields of 4 bytes each + 4 fields of 1 byte each (RGBA)
+    const new_strid = old_strid + 4 * BYTE_SIZE.UINT8; // 11 fields of 4 bytes each + 4 fields of 1 byte each (RGBA)
     const numPoints = Math.floor(data.length / old_strid);
     const new_size = numPoints * new_strid;
     const new_point_cloud_data = new Uint8Array(new_size);
@@ -368,7 +378,11 @@ function processAPIPointCloud(
     }
 
     // Map range values to colors
-    const colorValues = mapRangeToRgb(rangeColorMap, rangeValues, globalVars.range_band);
+    const colorValues = mapRangeToRgb(
+        rangeColorMap,
+        rangeValues,
+        globalVars.range_band,
+    );
 
     // Copy original data and add color information
     for (let i = 0; i < numPoints; i++) {
@@ -378,17 +392,20 @@ function processAPIPointCloud(
         // Copy original point data
         new_point_cloud_data.set(
             data.subarray(originalOffset, originalOffset + old_strid),
-            newOffset
+            newOffset,
         );
 
         // Add color information
         const color = i < colorValues.length ? colorValues[i] : [0, 0, 0];
-        new_point_cloud_data.set([
-            color[0] || 0,    // Red
-            color[1] || 0,    // Green
-            color[2] || 0,    // Blue
-            ALPHA_MAX         // Alpha (fully opaque)
-        ], newOffset + old_strid);
+        new_point_cloud_data.set(
+            [
+                color[0] || 0, // Red
+                color[1] || 0, // Green
+                color[2] || 0, // Blue
+                ALPHA_MAX, // Alpha (fully opaque)
+            ],
+            newOffset + old_strid,
+        );
     }
 
     // Return the modified point cloud message

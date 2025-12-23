@@ -96,7 +96,10 @@ function mapDopplerToRGB(
         // Normalize velocity to 0-255 range
         const normalizedValue = Math.max(
             0,
-            Math.min(255, Math.round(((velocity - minDop) / dopplerRange) * 255)),
+            Math.min(
+                255,
+                Math.round(((velocity - minDop) / dopplerRange) * 255),
+            ),
         );
 
         // Return the corresponding color from the map with safe fallback
