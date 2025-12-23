@@ -195,10 +195,10 @@
       },
       "transforms": {},
       "topics": {
-        "/point_cloud": {
+        "/ref_color_pointcloud": {
           "visible": true,
           "colorField": "z",
-          "colorMode": "flat",
+          "colorMode": "rgba-fields",
           "colorMap": "turbo"
         }
       },
@@ -367,16 +367,35 @@
       },
       "globalVariableName": "max_dop_bound",
       "foxglovePanelTitle": "Doppler Max bound (m/s)"
+    },
+    "GlobalVariableSliderPanel!6ref01": {
+      "sliderProps": {
+        "min": 0,
+        "max": 100,
+        "step": 0.1
+      },
+      "globalVariableName": "min_ref_bound",
+      "foxglovePanelTitle": "Reflectance Min Bound (dB)"
+    },
+    "GlobalVariableSliderPanel!6ref02": {
+      "sliderProps": {
+        "min": 0,
+        "max": 100,
+        "step": 0.1
+      },
+      "globalVariableName": "max_ref_bound",
+      "foxglovePanelTitle": "Reflectance Max Bound (dB)"
     }
   },
   "globalVariables": {
     "globalVariable": 2,
-    "min_SNR_bound": 5,
     "min_snr_bound": 0,
-    "max_snr_bound": 0,
+    "max_snr_bound": 100,
     "min_dop_bound": 0.3,
     "max_dop_bound": 0.3,
-    "range_band": 5
+    "range_band": 5,
+    "min_ref_bound": 0,
+    "max_ref_bound": 100
   },
   "userNodes": {
     "869d30d4-e1a0-4e9f-aea6-f6dc80f4858a": {
@@ -390,6 +409,10 @@
     "0951bbfe-4683-437a-84e1-102e7f204624": {
       "sourceCode": "{{rng_color_add_fields.ts}}",
       "name": "rng_color_add_fields.ts"
+    },
+    "a1b2c3d4-e5f6-7890-abcd-ef1234567890": {
+      "sourceCode": "{{ref_color_add_fields.ts}}",
+      "name": "ref_color_add_fields.ts"
     }
   },
   "playbackConfig": {
@@ -427,9 +450,18 @@
         "direction": "column",
         "splitPercentage": 25
       },
-      "second": "GlobalVariableSliderPanel!5wqrfj",
+      "second": {
+        "first": "GlobalVariableSliderPanel!5wqrfj",
+        "second": {
+          "first": "GlobalVariableSliderPanel!6ref01",
+          "second": "GlobalVariableSliderPanel!6ref02",
+          "direction": "column"
+        },
+        "direction": "column",
+        "splitPercentage": 33
+      },
       "direction": "column",
-      "splitPercentage": 77.13382507903056
+      "splitPercentage": 60
     },
     "direction": "row",
     "splitPercentage": 87.79697624190065
