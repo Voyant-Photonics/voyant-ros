@@ -219,7 +219,8 @@ export default function script(
         fields: any[];
     }
 
-    // Type guard functions, this is used because TypeScript can't infer the type of the message during compilation, but we can check it at runtime
+    // Type guard functions
+    // This is used because TypeScript can't infer the type of the message during compilation, but we can check it at runtime
     // Ref: https://www.typescriptlang.org/docs/handbook/advanced-types.html#using-the-in-operator
     function isROS2PointCloud(message: any): message is ROS2PointCloudMessage {
         return "row_step" in message && "point_step" in message;
@@ -247,17 +248,16 @@ export default function script(
         // Process API point cloud message
         return processAPIPointCloud(event.message, globalVars);
     } else {
-        // Throw an error if the message format is unknown i.e other than sensor_msgs/PointCloud2 or PointCloud
         throw new Error("Unknown point cloud message format");
     }
 }
 
 /**
- * Processes a ROS2 PointCloud2 message and adds color information based on SNR values
+ * Processes a ROS2 PointCloud2 message and adds color information based on range values
  * @param data Point cloud data as Uint8Array
  * @param originalStride Original point stride in bytes
  * @param ros_header ROS2 message header
- * @param globalVars Global variables for SNR bounds
+ * @param globalVars Global variables for range bounds
  * @returns Modified PointCloud message with color information
  */
 function processROS2PointCloud(
@@ -342,9 +342,9 @@ function processROS2PointCloud(
 }
 
 /**
- * Processes an API PointCloud message and adds color information based on SNR values
+ * Processes an API PointCloud message and adds color information based on range values
  * @param api_message API PointCloud message
- * @param globalVars Global variables for SNR bounds
+ * @param globalVars Global variables for range bounds
  * @returns Modified PointCloud message with color information
  */
 function processAPIPointCloud(
@@ -362,7 +362,7 @@ function processAPIPointCloud(
 ) {
     // Get the original point cloud data as a Uint8Array
     const { data, point_stride: old_strid } = api_message;
-    const new_strid = old_strid + 4 * BYTE_SIZE.UINT8; // 11 fields of 4 bytes each + 4 fields of 1 byte each (RGBA)
+    const new_strid = old_strid + 4 * BYTE_SIZE.UINT8; // Adding RGBA fields (4 bytes)
     const numPoints = Math.floor(data.length / old_strid);
     const new_size = numPoints * new_strid;
     const new_point_cloud_data = new Uint8Array(new_size);
@@ -416,17 +416,8 @@ function processAPIPointCloud(
         },
         frame_id: api_message.frame_id,
         pose: {
-            position: {
-                x: 0,
-                y: 0,
-                z: 0,
-            },
-            orientation: {
-                x: 0,
-                y: 0,
-                z: 0,
-                w: 1,
-            },
+            position: { x: 0, y: 0, z: 0 },
+            orientation: { x: 0, y: 0, z: 0, w: 1 },
         },
         point_stride: new_strid,
         fields: api_message.fields.concat(
