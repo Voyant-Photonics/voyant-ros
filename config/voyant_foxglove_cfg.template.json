@@ -353,7 +353,7 @@
     "GlobalVariableSliderPanel!6ref01": {
       "sliderProps": {
         "min": 0,
-        "max": 100,
+        "max": 125,
         "step": 0.1
       },
       "globalVariableName": "min_ref_bound",
@@ -362,7 +362,7 @@
     "GlobalVariableSliderPanel!6ref02": {
       "sliderProps": {
         "min": 0,
-        "max": 100,
+        "max": 125,
         "step": 0.1
       },
       "globalVariableName": "max_ref_bound",
@@ -395,7 +395,7 @@
     "max_dop_bound": 0.3,
     "range_band": 5,
     "min_ref_bound": 0,
-    "max_ref_bound": 100
+    "max_ref_bound": 125
   },
   "userNodes": {
     "869d30d4-e1a0-4e9f-aea6-f6dc80f4858a": {
