@@ -20,7 +20,7 @@ type RGBColor = [number, number, number];
 // Color constants
 const DOPPLER_COLORS: RGBColor[] = [
     [0.0, 100.0, 255.0], // Blue for negative doppler (moving towards)
-    [49.0, 49.0, 49.0], // Gray for zero doppler
+    [255.0, 255.0, 255.0], // White for zero doppler
     [255.0, 0.0, 0.0], // Red for positive doppler (moving away)
 ];
 
