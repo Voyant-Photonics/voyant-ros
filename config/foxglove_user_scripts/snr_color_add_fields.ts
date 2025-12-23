@@ -144,7 +144,8 @@ export default function script(
         fields: any[];
     }
 
-    // Type guard functions, this is used because TypeScript can't infer the type of the message during compilation, but we can check it at runtime
+    // Type guard functions
+    // This is used because TypeScript can't infer the type of the message during compilation, but we can check it at runtime
     // Ref: https://www.typescriptlang.org/docs/handbook/advanced-types.html#using-the-in-operator
     function isROS2PointCloud(message: any): message is ROS2PointCloudMessage {
         return "row_step" in message && "point_step" in message;
@@ -175,7 +176,6 @@ export default function script(
         const SNR_OFFSET = 24;
         return processAPIPointCloud(event.message, globalVars, SNR_OFFSET);
     } else {
-        // Throw an error if the message format is unknown i.e other than sensor_msgs/PointCloud2 or PointCloud
         throw new Error("Unknown point cloud message format");
     }
 }
@@ -246,7 +246,7 @@ function createColorizedPointCloud(
             newData.set([r, g, b, 255], dstOffset + oldStride);
         } else {
             // Fallback color if data is missing
-            // Make sure this never get executed
+            // TODO: Make sure this never get executed
             newData.set([128, 128, 128, 255], dstOffset + oldStride);
         }
     }
@@ -284,6 +284,7 @@ function processROS2PointCloud(
         INT32: 6,
         FLOAT32: 7,
     };
+
     // Define the point cloud fields including the added RGBA fields
     const POINT_CLOUD_FIELDS: PackedElementField[] = [
         { name: "x", offset: 0, type: FIELD_TYPE.FLOAT32 },
@@ -299,9 +300,8 @@ function processROS2PointCloud(
         { name: "blue", offset: 50, type: FIELD_TYPE.UINT8 },
         { name: "alpha", offset: 51, type: FIELD_TYPE.UINT8 },
     ];
-    const numPoints = data.length / originalStride;
 
-    // Calculate new stride with RGBA fields
+    const numPoints = data.length / originalStride;
     const newStride = originalStride + 4; // Adding 4 bytes for RGBA
 
     // Extract SNR values from all points
@@ -375,10 +375,9 @@ function processAPIPointCloud(
         timestamp: ts,
         frame_id: fid,
     } = api_message;
-    const numPoints = Math.floor(data.length / old_strid);
 
-    // Calculate new stride
-    const new_strid = old_strid + 4 * 1; // 11 fields of 4 bytes each + 4 fields of 1 byte each (RGBA)
+    const numPoints = Math.floor(data.length / old_strid);
+    const new_strid = old_strid + 4; // Adding 4 bytes for RGBA
 
     // Extract SNR values from all points
     const snrValues = extractSnrValues(data, old_strid, numPoints, SNR_OFFSET);
@@ -408,17 +407,8 @@ function processAPIPointCloud(
         },
         frame_id: fid,
         pose: {
-            position: {
-                x: 0,
-                y: 0,
-                z: 0,
-            },
-            orientation: {
-                x: 0,
-                y: 0,
-                z: 0,
-                w: 1,
-            },
+            position: { x: 0, y: 0, z: 0 },
+            orientation: { x: 0, y: 0, z: 0, w: 1 },
         },
         point_stride: new_strid,
         fields: cloud_fields.concat(
