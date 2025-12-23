@@ -323,24 +323,6 @@
       },
       "imageMode": {}
     },
-    "GlobalVariableSliderPanel!2e7ijri": {
-      "sliderProps": {
-        "min": 0,
-        "max": 100,
-        "step": 0.1
-      },
-      "globalVariableName": "max_snr_bound",
-      "foxglovePanelTitle": "SNR Max Bound (dB)"
-    },
-    "GlobalVariableSliderPanel!3qbvnjm": {
-      "sliderProps": {
-        "min": 0,
-        "max": 100,
-        "step": 0.1
-      },
-      "globalVariableName": "min_snr_bound",
-      "foxglovePanelTitle": "SNR Min Bound (dB)"
-    },
     "GlobalVariableSliderPanel!3q2vfoj": {
       "sliderProps": {
         "min": 5,
@@ -385,6 +367,24 @@
       },
       "globalVariableName": "max_ref_bound",
       "foxglovePanelTitle": "Reflectance Max Bound (dB)"
+    },
+    "GlobalVariableSliderPanel!3qbvnjm": {
+      "sliderProps": {
+        "min": 0,
+        "max": 100,
+        "step": 0.1
+      },
+      "globalVariableName": "min_snr_bound",
+      "foxglovePanelTitle": "SNR Min Bound (dB)"
+    },
+    "GlobalVariableSliderPanel!2e7ijri": {
+      "sliderProps": {
+        "min": 0,
+        "max": 100,
+        "step": 0.1
+      },
+      "globalVariableName": "max_snr_bound",
+      "foxglovePanelTitle": "SNR Max Bound (dB)"
     }
   },
   "globalVariables": {
@@ -423,47 +423,50 @@
       "first": {
         "first": "3D!3cvisw1",
         "second": "3D!1pnxa9v",
-        "direction": "column"
+        "direction": "column",
+        "splitPercentage": 50
       },
       "second": {
         "first": "3D!16ej2nv",
         "second": "3D!1sbddfc",
         "direction": "column",
-        "splitPercentage": 49.86737400530504
+        "splitPercentage": 50
       },
       "direction": "row",
       "splitPercentage": 50
     },
     "second": {
-      "first": {
-        "first": "GlobalVariableSliderPanel!2e7ijri",
-        "second": {
-          "first": {
-            "first": "GlobalVariableSliderPanel!3qbvnjm",
-            "second": "GlobalVariableSliderPanel!3q2vfoj",
-            "direction": "column"
-          },
-          "second": "GlobalVariableSliderPanel!2gxsope",
-          "direction": "column",
-          "splitPercentage": 75
-        },
-        "direction": "column",
-        "splitPercentage": 25
-      },
+      "first": "GlobalVariableSliderPanel!3q2vfoj",
       "second": {
-        "first": "GlobalVariableSliderPanel!5wqrfj",
+        "first": "GlobalVariableSliderPanel!2gxsope",
         "second": {
-          "first": "GlobalVariableSliderPanel!6ref01",
-          "second": "GlobalVariableSliderPanel!6ref02",
-          "direction": "column"
+          "first": "GlobalVariableSliderPanel!5wqrfj",
+          "second": {
+            "first": "GlobalVariableSliderPanel!6ref01",
+            "second": {
+              "first": "GlobalVariableSliderPanel!6ref02",
+              "second": {
+                "first": "GlobalVariableSliderPanel!3qbvnjm",
+                "second": "GlobalVariableSliderPanel!2e7ijri",
+                "direction": "column",
+                "splitPercentage": 50
+              },
+              "direction": "column",
+              "splitPercentage": 33.333333333333336
+            },
+            "direction": "column",
+            "splitPercentage": 25
+          },
+          "direction": "column",
+          "splitPercentage": 20
         },
         "direction": "column",
-        "splitPercentage": 33
+        "splitPercentage": 16.666666666666668
       },
       "direction": "column",
-      "splitPercentage": 60
+      "splitPercentage": 14.285714285714286
     },
     "direction": "row",
-    "splitPercentage": 87.79697624190065
+    "splitPercentage": 85
   }
 }
