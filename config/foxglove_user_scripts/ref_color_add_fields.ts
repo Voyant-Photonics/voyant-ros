@@ -8,22 +8,22 @@ import { PointCloud, PackedElementField } from "@foxglove/schemas";
 
 // The input and output topics for your script
 export const inputs = ["/point_cloud"];
-export const output = "/snr_color_pointcloud";
+export const output = "/ref_color_pointcloud";
 
 type GlobalVariables = {
-    min_snr_bound: number;
-    max_snr_bound: number;
+    min_ref_bound: number;
+    max_ref_bound: number;
 };
 
-// SNR color configuration
-const SNR_COLORS: [number, number, number][] = [
-    [7, 107, 236], // Low SNR (blue)
-    [255, 0, 127], // Mid SNR (magenta)
-    [255, 204, 0], // High SNR (yellow)
+// Reflectance color configuration (same as SNR)
+const REF_COLORS: [number, number, number][] = [
+    [7, 107, 236], // Low reflectance (blue)
+    [255, 0, 127], // Mid reflectance (magenta)
+    [255, 204, 0], // High reflectance (yellow)
 ];
 
 // Pre-compute the color map
-const colorMap = createLinearColorMap(SNR_COLORS);
+const colorMap = createLinearColorMap(REF_COLORS);
 
 /**
  * Creates a linear color mapping between three colors
@@ -64,31 +64,31 @@ function createLinearColorMap(colors: [number, number, number][]): number[][] {
 }
 
 /**
- * Converts SNR values to RGB colors using the provided color map
+ * Converts reflectance values to RGB colors using the provided color map
  * @param colorMap The color map to use for conversion
- * @param snrValues Array of SNR values (in dB)
- * @param minSnr Minimum SNR value for normalization (0 = auto)
- * @param maxSnr Maximum SNR value for normalization (0 = auto)
- * @returns Array of RGB values corresponding to the input SNR values
+ * @param refValues Array of reflectance values (in dB)
+ * @param minRef Minimum reflectance value for normalization (0 = auto)
+ * @param maxRef Maximum reflectance value for normalization (0 = auto)
+ * @returns Array of RGB values corresponding to the input reflectance values
  */
-function mapSnrToRgb(
+function mapRefToRgb(
     colorMap: number[][],
-    snrValues: number[],
-    minSnr: number,
-    maxSnr: number,
+    refValues: number[],
+    minRef: number,
+    maxRef: number,
 ): number[][] {
     // Auto-range if both bounds are set to 0
-    if (minSnr == 0.0 && maxSnr == 0.0) {
-        minSnr = Math.min(...snrValues);
-        maxSnr = Math.max(...snrValues);
+    if (minRef == 0.0 && maxRef == 0.0) {
+        minRef = Math.min(...refValues);
+        maxRef = Math.max(...refValues);
     }
 
     // Find actual min/max within bounds
-    const validMin = Math.max(minSnr, Math.min(...snrValues));
-    const validMax = Math.min(maxSnr, Math.max(...snrValues));
+    const validMin = Math.max(minRef, Math.min(...refValues));
+    const validMax = Math.min(maxRef, Math.max(...refValues));
     const range = validMax - validMin;
 
-    return snrValues.map((value) => {
+    return refValues.map((value) => {
         // Clip to min/max bounds
         const clippedValue = Math.min(Math.max(value, validMin), validMax);
 
@@ -115,10 +115,13 @@ function bytesToFloat32(bytes: Uint8Array): number {
     return dataView.getFloat32(0, true); // true for little-endian
 }
 
+// Fallback gray color for points without reflectance data
+const FALLBACK_COLOR: number[] = [128, 128, 128];
+
 /**
- * Main script function to process point cloud data and color it based on SNR values
+ * Main script function to process point cloud data and color it based on reflectance values
  * @param event Input event containing LiDAR point cloud data
- * @param globalVars Global variables for SNR bounds
+ * @param globalVars Global variables for reflectance bounds
  * @returns Modified point cloud with added color information
  */
 export default function script(
@@ -163,58 +166,65 @@ export default function script(
 
     if (isROS2PointCloud(event.message)) {
         // Process ROS2 point cloud message
-        const SNR_OFFSET = 20;
+        const REF_OFFSET = 34;
+        const VOYANT_POINT_STRIDE = 48; // Standard VoyantPoint without reflectance
         const {
             data,
             point_step: originalStride,
             header: ros_header,
         } = event.message;
 
+        // Check if this is the extended format with reflectance
+        // Only VoyantPointMdlExtended (stride > 48) has reflectance data
+        const hasReflectance = originalStride > VOYANT_POINT_STRIDE;
+
         return processROS2PointCloud(
             data,
             originalStride,
             ros_header,
             globalVars,
-            SNR_OFFSET,
+            REF_OFFSET,
+            hasReflectance,
         );
     } else if (isAPIPointCloud(event.message)) {
         // Process API point cloud message
-        const SNR_OFFSET = 24;
-        return processAPIPointCloud(event.message, globalVars, SNR_OFFSET);
+        // API messages always have reflectance
+        const REF_OFFSET = 28;
+        return processAPIPointCloud(event.message, globalVars, REF_OFFSET);
     } else {
         throw new Error("Unknown point cloud message format");
     }
 }
 
 /**
- * Extracts SNR values from point cloud data and converts to dB
+ * Extracts reflectance values from point cloud data and converts to dB
  * @param data Original point cloud data
  * @param stride Original point stride
  * @param numPoints Number of points
- * @param SNR_OFFSET Offset of the SNR field in bytes
- * @returns Array of SNR values in dB
+ * @param REF_OFFSET Offset of the reflectance field in bytes
+ * @returns Array of reflectance values in dB
  */
-function extractSnrValues(
+function extractRefValues(
     data: Uint8Array,
     stride: number,
     numPoints: number,
-    SNR_OFFSET: number,
+    REF_OFFSET: number,
 ): number[] {
-    const snrValues: number[] = [];
+    const refValues: number[] = [];
 
     for (let i = 0; i < numPoints; i++) {
         const pointOffset = i * stride;
-        const snrBytes = data.slice(
-            pointOffset + SNR_OFFSET,
-            pointOffset + SNR_OFFSET + 4,
+        const refBytes = data.slice(
+            pointOffset + REF_OFFSET,
+            pointOffset + REF_OFFSET + 4,
         );
-        const snrValue = bytesToFloat32(snrBytes);
+        const refValue = bytesToFloat32(refBytes);
         // Convert to dB scale
-        const snrDb = 10 * Math.log10(snrValue);
-        snrValues.push(snrDb);
+        const refDb = 10 * Math.log10(refValue);
+        refValues.push(refDb);
     }
 
-    return snrValues;
+    return refValues;
 }
 
 /**
@@ -254,7 +264,6 @@ function createColorizedPointCloud(
             newData.set([r, g, b, 255], dstOffset + oldStride);
         } else {
             // Fallback color if data is missing
-            // TODO: Make sure this never get executed
             newData.set([128, 128, 128, 255], dstOffset + oldStride);
         }
     }
@@ -263,12 +272,13 @@ function createColorizedPointCloud(
 }
 
 /**
- * Processes a ROS2 PointCloud2 message and adds color information based on SNR values
+ * Processes a ROS2 PointCloud2 message and adds color information based on reflectance values
  * @param data Point cloud data as Uint8Array
  * @param originalStride Original point stride in bytes
  * @param ros_header ROS2 message header
- * @param globalVars Global variables for SNR bounds
- * @param SNR_OFFSET Offset of the SNR field in bytes
+ * @param globalVars Global variables for reflectance bounds
+ * @param REF_OFFSET Offset of the reflectance field in bytes
+ * @param hasReflectance Whether the point cloud has reflectance data
  * @returns Modified PointCloud message with color information
  */
 function processROS2PointCloud(
@@ -282,7 +292,8 @@ function processROS2PointCloud(
         frame_id: string;
     },
     globalVars: GlobalVariables,
-    SNR_OFFSET: number,
+    REF_OFFSET: number,
+    hasReflectance: boolean,
 ) {
     // Constants for point cloud field types
     const FIELD_TYPE = {
@@ -312,21 +323,28 @@ function processROS2PointCloud(
     const numPoints = data.length / originalStride;
     const newStride = originalStride + 4; // Adding 4 bytes for RGBA
 
-    // Extract SNR values from all points
-    const snrValues = extractSnrValues(
-        data,
-        originalStride,
-        numPoints,
-        SNR_OFFSET,
-    );
+    let rgbColors: number[][];
 
-    // Convert SNR values to RGB colors
-    const rgbColors = mapSnrToRgb(
-        colorMap,
-        snrValues,
-        globalVars.min_snr_bound,
-        globalVars.max_snr_bound,
-    );
+    if (hasReflectance) {
+        // Extract reflectance values from all points
+        const refValues = extractRefValues(
+            data,
+            originalStride,
+            numPoints,
+            REF_OFFSET,
+        );
+
+        // Convert reflectance values to RGB colors
+        rgbColors = mapRefToRgb(
+            colorMap,
+            refValues,
+            globalVars.min_ref_bound,
+            globalVars.max_ref_bound,
+        );
+    } else {
+        // No reflectance data - use fallback gray for all points
+        rgbColors = Array(numPoints).fill(FALLBACK_COLOR);
+    }
 
     // Create the new point cloud data with added color information
     const coloredPointCloud = createColorizedPointCloud(
@@ -355,10 +373,11 @@ function processROS2PointCloud(
 }
 
 /**
- * Processes an API PointCloud message and adds color information based on SNR values
+ * Processes an API PointCloud message and adds color information based on reflectance values
+ * API messages always have reflectance data available
  * @param api_message API PointCloud message
- * @param globalVars Global variables for SNR bounds
- * @param SNR_OFFSET Offset of the SNR field in bytes
+ * @param globalVars Global variables for reflectance bounds
+ * @param REF_OFFSET Offset of the reflectance field in bytes
  * @returns Modified PointCloud message with color information
  */
 function processAPIPointCloud(
@@ -373,7 +392,7 @@ function processAPIPointCloud(
         fields: any[];
     },
     globalVars: GlobalVariables,
-    SNR_OFFSET: number,
+    REF_OFFSET: number,
 ) {
     // Get the original point cloud data as a Uint8Array
     const {
@@ -387,15 +406,15 @@ function processAPIPointCloud(
     const numPoints = Math.floor(data.length / old_strid);
     const new_strid = old_strid + 4; // Adding 4 bytes for RGBA
 
-    // Extract SNR values from all points
-    const snrValues = extractSnrValues(data, old_strid, numPoints, SNR_OFFSET);
+    // Extract reflectance values from all points (always available in API messages)
+    const refValues = extractRefValues(data, old_strid, numPoints, REF_OFFSET);
 
-    // Convert SNR values to RGB colors
-    const rgbColors = mapSnrToRgb(
+    // Convert reflectance values to RGB colors
+    const rgbColors = mapRefToRgb(
         colorMap,
-        snrValues,
-        globalVars.min_snr_bound,
-        globalVars.max_snr_bound,
+        refValues,
+        globalVars.min_ref_bound,
+        globalVars.max_ref_bound,
     );
 
     // Create the new point cloud data with added color information

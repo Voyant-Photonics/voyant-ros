@@ -154,3 +154,27 @@ The launch command will start the driver and publish pointcloud data on the `/po
 3. In the top right corner of the Foxglove GUI title bar, click on the `Layout` button and import the configuration file from `config/voyant_ros_foxglove_cfg.json`
 
 This will load a layout with pointcloud data visualization, offering three different color maps. For more information on the colormap options, refer to the [Foxglove Colormap Documentation](https://voyant-photonics.github.io/02_getting-started/visualization.html).
+
+## Managing the Foxglove Layout Config
+
+The Foxglove configuration uses a template system to keep user scripts version-controlled as separate `.ts` files.
+
+**Files:**
+
+- `config/foxglove_user_scripts/*.ts` - Edit these scripts directly
+- `config/voyant_foxglove_cfg.template.json` - Edit layout, panels, and global variables here
+- `config/voyant_foxglove_cfg.json` (**Auto-generated, do not edit**) - The layout to import into Foxglove
+After modifying any user script or the template, regenerate the config:
+
+```bash
+python3 config/build_foxglove_config.py \
+    --template config/voyant_foxglove_cfg.template.json \
+    --scripts-dir config/foxglove_user_scripts \
+    --output config/voyant_foxglove_cfg.json
+```
+
+And clean up the formatting:
+
+```bash
+pre-commit run --all-files
+```

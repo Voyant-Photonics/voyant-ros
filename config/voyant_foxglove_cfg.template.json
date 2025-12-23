@@ -1,0 +1,472 @@
+{
+  "configById": {
+    "3D!3cvisw1": {
+      "cameraState": {
+        "perspective": true,
+        "distance": 4.2927752788580085,
+        "phi": 78.97299568694065,
+        "thetaOffset": 101.9683624588024,
+        "targetOffset": [
+          3.5896963284058376,
+          0.5681247610452743,
+          4.451131822576884e-16
+        ],
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "scene": {
+        "transforms": {
+          "visible": false
+        },
+        "syncCamera": true
+      },
+      "transforms": {},
+      "topics": {
+        "/rng_color_pointcloud": {
+          "visible": true,
+          "colorField": "z",
+          "colorMode": "rgba-fields",
+          "colorMap": "turbo"
+        }
+      },
+      "layers": {
+        "grid": {
+          "visible": false,
+          "frameLocked": true,
+          "label": "Grid",
+          "instanceId": "10139065-341c-4c45-9b7d-b6a8b3fef1c6",
+          "layerId": "foxglove.Grid",
+          "size": 10,
+          "divisions": 10,
+          "lineWidth": 1,
+          "color": "#248eff",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "imageMode": {}
+    },
+    "3D!1pnxa9v": {
+      "cameraState": {
+        "perspective": true,
+        "distance": 4.2927752788580085,
+        "phi": 78.97299568694065,
+        "thetaOffset": 101.9683624588024,
+        "targetOffset": [
+          3.5896963284058376,
+          0.5681247610452743,
+          4.451131822576884e-16
+        ],
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "scene": {
+        "transforms": {
+          "visible": false
+        },
+        "syncCamera": true
+      },
+      "transforms": {},
+      "topics": {
+        "/point_cloud": {
+          "visible": false,
+          "colorField": "x",
+          "colorMode": "flat",
+          "colorMap": "rainbow"
+        },
+        "/dop_color_pointcloud": {
+          "visible": true,
+          "colorField": "z",
+          "colorMode": "rgba-fields",
+          "colorMap": "turbo",
+          "pointShape": "circle",
+          "pointSize": 1.5
+        }
+      },
+      "layers": {
+        "grid": {
+          "visible": false,
+          "frameLocked": true,
+          "label": "Grid",
+          "instanceId": "8afeb711-8619-4657-815b-25b1b1ea6822",
+          "layerId": "foxglove.Grid",
+          "size": 10,
+          "divisions": 10,
+          "lineWidth": 1,
+          "color": "#248eff",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "imageMode": {}
+    },
+    "3D!16ej2nv": {
+      "cameraState": {
+        "perspective": true,
+        "distance": 4.2927752788580085,
+        "phi": 78.97299568694065,
+        "thetaOffset": 101.9683624588024,
+        "targetOffset": [
+          3.5896963284058376,
+          0.5681247610452743,
+          4.451131822576884e-16
+        ],
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "scene": {
+        "syncCamera": true,
+        "transforms": {
+          "visible": false
+        }
+      },
+      "transforms": {},
+      "topics": {
+        "/ref_color_pointcloud": {
+          "visible": true,
+          "colorField": "z",
+          "colorMode": "rgba-fields",
+          "colorMap": "turbo"
+        }
+      },
+      "layers": {
+        "grid": {
+          "visible": false,
+          "drawBehind": false,
+          "frameLocked": true,
+          "label": "Grid",
+          "instanceId": "6d1e413d-67f1-4577-bee1-f6f6233f7b73",
+          "layerId": "foxglove.Grid",
+          "size": 10,
+          "divisions": 10,
+          "lineWidth": 1,
+          "color": "#248eff",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "imageMode": {}
+    },
+    "3D!1sbddfc": {
+      "cameraState": {
+        "perspective": true,
+        "distance": 4.2927752788580085,
+        "phi": 78.97299568694065,
+        "thetaOffset": 101.9683624588024,
+        "targetOffset": [
+          3.5896963284058376,
+          0.5681247610452743,
+          4.451131822576884e-16
+        ],
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "scene": {
+        "transforms": {
+          "visible": false
+        },
+        "syncCamera": true
+      },
+      "transforms": {},
+      "topics": {
+        "/snr_color_pointcloud": {
+          "visible": true,
+          "colorField": "z",
+          "colorMode": "rgba-fields",
+          "colorMap": "turbo",
+          "pointSize": 1.5
+        },
+        "/dop_color_pointcloud": {
+          "visible": false,
+          "colorField": "z",
+          "colorMode": "rgba-fields",
+          "colorMap": "turbo"
+        },
+        "/point_cloud": {
+          "visible": false
+        }
+      },
+      "layers": {
+        "grid": {
+          "visible": false,
+          "frameLocked": true,
+          "label": "Grid",
+          "instanceId": "8afeb711-8619-4657-815b-25b1b1ea6822",
+          "layerId": "foxglove.Grid",
+          "size": 10,
+          "divisions": 10,
+          "lineWidth": 1,
+          "color": "#248eff",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "imageMode": {}
+    },
+    "GlobalVariableSliderPanel!3q2vfoj": {
+      "sliderProps": {
+        "min": 5,
+        "max": 200,
+        "step": 0.5
+      },
+      "globalVariableName": "range_band",
+      "foxglovePanelTitle": "Range Band (m)"
+    },
+    "GlobalVariableSliderPanel!2gxsope": {
+      "sliderProps": {
+        "min": 0,
+        "max": 3,
+        "step": 0.1
+      },
+      "globalVariableName": "min_dop_bound",
+      "foxglovePanelTitle": "Doppler Min bound -ve(m/s)"
+    },
+    "GlobalVariableSliderPanel!5wqrfj": {
+      "sliderProps": {
+        "min": 0,
+        "max": 3,
+        "step": 0.1
+      },
+      "globalVariableName": "max_dop_bound",
+      "foxglovePanelTitle": "Doppler Max bound (m/s)"
+    },
+    "GlobalVariableSliderPanel!6ref01": {
+      "sliderProps": {
+        "min": 0,
+        "max": 125,
+        "step": 0.1
+      },
+      "globalVariableName": "min_ref_bound",
+      "foxglovePanelTitle": "Reflectance Min Bound (dB)"
+    },
+    "GlobalVariableSliderPanel!6ref02": {
+      "sliderProps": {
+        "min": 0,
+        "max": 125,
+        "step": 0.1
+      },
+      "globalVariableName": "max_ref_bound",
+      "foxglovePanelTitle": "Reflectance Max Bound (dB)"
+    },
+    "GlobalVariableSliderPanel!3qbvnjm": {
+      "sliderProps": {
+        "min": 0,
+        "max": 100,
+        "step": 0.1
+      },
+      "globalVariableName": "min_snr_bound",
+      "foxglovePanelTitle": "SNR Min Bound (dB)"
+    },
+    "GlobalVariableSliderPanel!2e7ijri": {
+      "sliderProps": {
+        "min": 0,
+        "max": 100,
+        "step": 0.1
+      },
+      "globalVariableName": "max_snr_bound",
+      "foxglovePanelTitle": "SNR Max Bound (dB)"
+    }
+  },
+  "globalVariables": {
+    "globalVariable": 2,
+    "min_snr_bound": 0,
+    "max_snr_bound": 100,
+    "min_dop_bound": 0.3,
+    "max_dop_bound": 0.3,
+    "range_band": 5,
+    "min_ref_bound": 45,
+    "max_ref_bound": 100
+  },
+  "userNodes": {
+    "869d30d4-e1a0-4e9f-aea6-f6dc80f4858a": {
+      "sourceCode": "{{snr_color_add_fields.ts}}",
+      "name": "snr_color_add_fields.ts"
+    },
+    "87132b73-8226-4e15-9e26-b4dd44475001": {
+      "sourceCode": "{{dop_color_add_fields.ts}}",
+      "name": "dop_color_add_fields.ts"
+    },
+    "0951bbfe-4683-437a-84e1-102e7f204624": {
+      "sourceCode": "{{rng_color_add_fields.ts}}",
+      "name": "rng_color_add_fields.ts"
+    },
+    "a1b2c3d4-e5f6-7890-abcd-ef1234567890": {
+      "sourceCode": "{{ref_color_add_fields.ts}}",
+      "name": "ref_color_add_fields.ts"
+    }
+  },
+  "playbackConfig": {
+    "speed": 1
+  },
+  "layout": {
+    "first": {
+      "first": {
+        "first": "3D!3cvisw1",
+        "second": "3D!1pnxa9v",
+        "direction": "column",
+        "splitPercentage": 50
+      },
+      "second": {
+        "first": "3D!16ej2nv",
+        "second": "3D!1sbddfc",
+        "direction": "column",
+        "splitPercentage": 50
+      },
+      "direction": "row",
+      "splitPercentage": 50
+    },
+    "second": {
+      "first": "GlobalVariableSliderPanel!3q2vfoj",
+      "second": {
+        "first": "GlobalVariableSliderPanel!2gxsope",
+        "second": {
+          "first": "GlobalVariableSliderPanel!5wqrfj",
+          "second": {
+            "first": "GlobalVariableSliderPanel!6ref01",
+            "second": {
+              "first": "GlobalVariableSliderPanel!6ref02",
+              "second": {
+                "first": "GlobalVariableSliderPanel!3qbvnjm",
+                "second": "GlobalVariableSliderPanel!2e7ijri",
+                "direction": "column",
+                "splitPercentage": 50
+              },
+              "direction": "column",
+              "splitPercentage": 33.333333333333336
+            },
+            "direction": "column",
+            "splitPercentage": 25
+          },
+          "direction": "column",
+          "splitPercentage": 20
+        },
+        "direction": "column",
+        "splitPercentage": 16.666666666666668
+      },
+      "direction": "column",
+      "splitPercentage": 14.285714285714286
+    },
+    "direction": "row",
+    "splitPercentage": 85
+  }
+}
