@@ -67,8 +67,8 @@ function createLinearColorMap(colors: [number, number, number][]): number[][] {
  * Converts SNR values to RGB colors using the provided color map
  * @param colorMap The color map to use for conversion
  * @param snrValues Array of SNR values (in dB)
- * @param minSnr Minimum SNR value for normalization
- * @param maxSnr Maximum SNR value for normalization
+ * @param minSnr Minimum SNR value for normalization (0 = auto)
+ * @param maxSnr Maximum SNR value for normalization (0 = auto)
  * @returns Array of RGB values corresponding to the input SNR values
  */
 function mapSnrToRgb(
@@ -77,6 +77,12 @@ function mapSnrToRgb(
     minSnr: number,
     maxSnr: number,
 ): number[][] {
+    // Auto-range if both bounds are set to 0
+    if (minSnr == 0.0 && maxSnr == 0.0) {
+        minSnr = Math.min(...snrValues);
+        maxSnr = Math.max(...snrValues);
+    }
+
     // Find actual min/max within bounds
     const validMin = Math.max(minSnr, Math.min(...snrValues));
     const validMax = Math.min(maxSnr, Math.max(...snrValues));

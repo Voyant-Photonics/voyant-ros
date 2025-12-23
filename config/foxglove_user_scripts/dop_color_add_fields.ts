@@ -77,8 +77,8 @@ function interpolate(a: number, b: number, t: number): number {
  * Maps doppler velocity values to RGB colors using a predefined color map
  * @param colorMap The color mapping array (256 RGB values)
  * @param velocities Array of doppler velocity values
- * @param minDoppler Minimum doppler value for normalization
- * @param maxDoppler Maximum doppler value for normalization
+ * @param minDoppler Minimum doppler value for normalization (0 = auto)
+ * @param maxDoppler Maximum doppler value for normalization (0 = auto)
  * @returns Array of RGB color values corresponding to input velocities
  */
 function mapDopplerToRGB(
@@ -87,6 +87,12 @@ function mapDopplerToRGB(
     minDoppler: number,
     maxDoppler: number,
 ): number[][] {
+    // Auto-range if both bounds are set to 0
+    if (minDoppler == 0.0 && maxDoppler == 0.0) {
+        minDoppler = Math.min(...velocities);
+        maxDoppler = Math.max(...velocities);
+    }
+
     // Ensure min is negative (moving away) and max is positive (moving toward)
     const minDop = -Math.abs(minDoppler);
     const maxDop = Math.abs(maxDoppler);
