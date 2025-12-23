@@ -66,7 +66,7 @@ function createLinearColorMap(colors: [number, number, number][]): number[][] {
 /**
  * Converts SNR values to RGB colors using the provided color map
  * @param colorMap The color map to use for conversion
- * @param snrValues Array of SNR values
+ * @param snrValues Array of SNR values (in dB)
  * @param minSnr Minimum SNR value for normalization
  * @param maxSnr Maximum SNR value for normalization
  * @returns Array of RGB values corresponding to the input SNR values
@@ -181,12 +181,12 @@ export default function script(
 }
 
 /**
- * Extracts SNR values from point cloud data
+ * Extracts SNR values from point cloud data and converts to dB
  * @param data Original point cloud data
  * @param stride Original point stride
  * @param numPoints Number of points
  * @param SNR_OFFSET Offset of the SNR field in bytes
- * @returns Array of SNR values
+ * @returns Array of SNR values in dB
  */
 function extractSnrValues(
     data: Uint8Array,
@@ -203,7 +203,9 @@ function extractSnrValues(
             pointOffset + SNR_OFFSET + 4,
         );
         const snrValue = bytesToFloat32(snrBytes);
-        snrValues.push(snrValue);
+        // Convert to dB scale
+        const snrDb = 10 * Math.log10(snrValue);
+        snrValues.push(snrDb);
     }
 
     return snrValues;
