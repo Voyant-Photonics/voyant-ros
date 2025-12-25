@@ -132,6 +132,18 @@ function bytesToFloat32(bytes: Uint8Array): number {
 }
 
 /**
+ * Safely converts a linear value to dB scale
+ * @param val Linear value
+ * @returns dB value, or -100 for zero/negative values
+ */
+function safeLog10dB(val: number): number {
+    if (val > 0) {
+        return 10 * Math.log10(val);
+    }
+    return -100;
+}
+
+/**
  * Main script function to process point cloud data and color it based on reflectance values
  * @param event Input event containing LiDAR point cloud data
  * @param globalVars Global variables for reflectance bounds
@@ -237,8 +249,8 @@ function extractXYZAndReflectance(
             pointOffset + REF_OFFSET + 4,
         );
         const refValue = bytesToFloat32(refBytes);
-        // Convert to dB scale
-        const refDb = 10 * Math.log10(refValue);
+        // Safely convert to dB scale
+        const refDb = safeLog10dB(refValue);
         refValues.push(refDb);
     }
 

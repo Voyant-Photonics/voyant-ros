@@ -129,6 +129,18 @@ function bytesToFloat32(bytes: Uint8Array): number {
 }
 
 /**
+ * Safely converts a linear value to dB scale
+ * @param val Linear value
+ * @returns dB value, or -100 for zero/negative values
+ */
+function safeLog10dB(val: number): number {
+    if (val > 0) {
+        return 10 * Math.log10(val);
+    }
+    return -100;
+}
+
+/**
  * Main script function to process point cloud data and color it based on SNR values
  * @param event Input event containing LiDAR point cloud data
  * @param globalVars Global variables for SNR bounds
@@ -234,8 +246,8 @@ function extractXYZAndSNR(
             pointOffset + SNR_OFFSET + 4,
         );
         const snrValue = bytesToFloat32(snrBytes);
-        // Convert to dB scale
-        const snrDb = 10 * Math.log10(snrValue);
+        // Safely convert to dB scale
+        const snrDb = safeLog10dB(snrValue);
         snrValues.push(snrDb);
     }
 
