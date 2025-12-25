@@ -344,7 +344,7 @@ function processROS2PointCloud(
     globalVars: GlobalVariables,
 ) {
     const XYZ_OFFSET = 0;
-    const REF_OFFSET = 34;
+    const REF_OFFSET = 36;
     const VOYANT_POINT_STRIDE = 48; // Standard VoyantPoint without reflectance
     const numPoints = data.length / originalStride;
 
