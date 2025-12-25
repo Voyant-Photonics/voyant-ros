@@ -27,6 +27,19 @@ const DOPPLER_COLORS: RGBColor[] = [
 // Pre-compute the color map
 const dopColorMap = createLinearColorMap(DOPPLER_COLORS);
 
+// Output point cloud field structure with XYZRGBA
+const XYZRGBA_FIELDS: PackedElementField[] = [
+    { name: "x", offset: 0, type: 7 }, // FLOAT32
+    { name: "y", offset: 4, type: 7 }, // FLOAT32
+    { name: "z", offset: 8, type: 7 }, // FLOAT32
+    { name: "red", offset: 12, type: 1 }, // UINT8
+    { name: "green", offset: 13, type: 1 }, // UINT8
+    { name: "blue", offset: 14, type: 1 }, // UINT8
+    { name: "alpha", offset: 15, type: 1 }, // UINT8
+];
+
+const XYZRGBA_STRIDE = 16;
+
 /**
  * Creates a linear color gradient map between given color points
  * @param colors Array of RGB triplets defining the gradient points
@@ -170,7 +183,6 @@ export default function script(
 
     if (isROS2PointCloud(event.message)) {
         // Process ROS2 point cloud message
-        const DOP_OFFSET = 16;
         const {
             data,
             point_step: originalStride,
@@ -182,35 +194,48 @@ export default function script(
             originalStride,
             ros_header,
             globalVars,
-            DOP_OFFSET,
         );
     } else if (isAPIPointCloud(event.message)) {
         // Process API point cloud message
-        const DOP_OFFSET = 20;
-        return processAPIPointCloud(event.message, globalVars, DOP_OFFSET);
+        return processAPIPointCloud(event.message, globalVars);
     } else {
         throw new Error("Unknown point cloud message format");
     }
 }
 
 /**
- * Extracts doppler velocity values from point cloud data
+ * Extracts XYZ and doppler values from point cloud data
  * @param data Raw point cloud data
  * @param stride Point stride in bytes
  * @param numPoints Number of points in the cloud
+ * @param XYZ_OFFSET Offset of the XYZ fields in bytes
  * @param DOP_OFFSET Offset of the doppler field in bytes
- * @returns Array of doppler velocity values
+ * @returns Object containing xyz positions and doppler velocities
  */
-function extractDopplerValues(
+function extractXYZAndDoppler(
     data: Uint8Array,
     stride: number,
     numPoints: number,
+    XYZ_OFFSET: number,
     DOP_OFFSET: number,
-): number[] {
+): { xyz: Float32Array; dopplerValues: number[] } {
+    const xyz = new Float32Array(numPoints * 3);
     const dopplerValues: number[] = [];
 
     for (let i = 0; i < numPoints; i++) {
         const pointOffset = i * stride;
+
+        // Extract XYZ (12 bytes starting at XYZ_OFFSET)
+        const xyzView = new DataView(
+            data.buffer,
+            data.byteOffset + pointOffset,
+            stride,
+        );
+        xyz[i * 3] = xyzView.getFloat32(XYZ_OFFSET, true); // x
+        xyz[i * 3 + 1] = xyzView.getFloat32(XYZ_OFFSET + 4, true); // y
+        xyz[i * 3 + 2] = xyzView.getFloat32(XYZ_OFFSET + 8, true); // z
+
+        // Extract doppler velocity
         const dopplerBytes = new Uint8Array(4);
         dopplerBytes.set(
             data.subarray(
@@ -221,47 +246,48 @@ function extractDopplerValues(
         dopplerValues.push(uint8ArrayToFloat32(dopplerBytes));
     }
 
-    return dopplerValues;
+    return { xyz, dopplerValues };
 }
 
 /**
- * Creates a new point cloud with colorized points
- * @param sourceData Original point cloud data
+ * Creates XYZRGBA point cloud from positions and colors
+ * @param xyz Float32Array of XYZ positions (length = numPoints * 3)
  * @param colors RGB color values for each point
- * @param oldStride Original point stride in bytes
- * @param newStride New point stride in bytes
  * @param numPoints Number of points in the cloud
- * @returns New Uint8Array with original data plus colors
+ * @returns New Uint8Array with XYZRGBA data
  */
-function createColorizedPointCloud(
-    sourceData: Uint8Array,
+function createXYZRGBAPointCloud(
+    xyz: Float32Array,
     colors: number[][],
-    oldStride: number,
-    newStride: number,
     numPoints: number,
 ): Uint8Array {
-    const newSize = numPoints * newStride;
+    const newSize = numPoints * XYZRGBA_STRIDE;
     const newData = new Uint8Array(newSize);
 
     for (let i = 0; i < numPoints; i++) {
-        const srcOffset = i * oldStride;
-        const dstOffset = i * newStride;
+        const offset = i * XYZRGBA_STRIDE;
 
-        // Copy original point data
-        newData.set(
-            sourceData.subarray(srcOffset, srcOffset + oldStride),
-            dstOffset,
-        );
+        // Write XYZ (12 bytes)
+        const xyzView = new DataView(newData.buffer, offset, 12);
+        xyzView.setFloat32(0, xyz[i * 3], true); // x
+        xyzView.setFloat32(4, xyz[i * 3 + 1], true); // y
+        xyzView.setFloat32(8, xyz[i * 3 + 2], true); // z
 
-        // Add color data
+        // Write RGBA (4 bytes)
         if (i < colors.length && colors[i]) {
             const [r, g, b] = colors[i].map((v) =>
                 Math.round(Math.max(0, Math.min(255, v))),
             );
-            newData.set([r, g, b, 255], dstOffset + oldStride);
+            newData[offset + 12] = r;
+            newData[offset + 13] = g;
+            newData[offset + 14] = b;
+            newData[offset + 15] = 255; // alpha
         } else {
             // Fallback color if data is missing
-            newData.set([128, 128, 128, 255], dstOffset + oldStride);
+            newData[offset + 12] = 128; // r
+            newData[offset + 13] = 128; // g
+            newData[offset + 14] = 128; // b
+            newData[offset + 15] = 255; // alpha
         }
     }
 
@@ -274,7 +300,6 @@ function createColorizedPointCloud(
  * @param originalStride Original point stride in bytes
  * @param ros_header ROS2 message header
  * @param globalVars Global variables for Doppler bounds
- * @param DOP_OFFSET Offset of the Doppler field in bytes
  * @returns Modified PointCloud message with color information
  */
 function processROS2PointCloud(
@@ -288,47 +313,21 @@ function processROS2PointCloud(
         frame_id: string;
     },
     globalVars: GlobalVariables,
-    DOP_OFFSET: number,
 ) {
-    // Constants for point cloud field types
-    const FIELD_TYPE = {
-        UINT8: 1,
-        UINT16: 2,
-        UINT32: 5,
-        INT32: 6,
-        FLOAT32: 7,
-    };
-
-    // Define the point cloud fields including the added RGBA fields
-    const POINT_CLOUD_FIELDS: PackedElementField[] = [
-        { name: "x", offset: 0, type: FIELD_TYPE.FLOAT32 },
-        { name: "y", offset: 4, type: FIELD_TYPE.FLOAT32 },
-        { name: "z", offset: 8, type: FIELD_TYPE.FLOAT32 },
-        { name: "v", offset: 16, type: FIELD_TYPE.FLOAT32 },
-        { name: "snr", offset: 20, type: FIELD_TYPE.FLOAT32 },
-        { name: "drop_reason", offset: 24, type: FIELD_TYPE.UINT16 },
-        { name: "timestamp_nsecs", offset: 26, type: FIELD_TYPE.INT32 },
-        { name: "point_idx", offset: 30, type: FIELD_TYPE.UINT32 },
-        { name: "red", offset: originalStride, type: FIELD_TYPE.UINT8 },
-        { name: "green", offset: originalStride + 1, type: FIELD_TYPE.UINT8 },
-        { name: "blue", offset: originalStride + 2, type: FIELD_TYPE.UINT8 },
-        { name: "alpha", offset: originalStride + 3, type: FIELD_TYPE.UINT8 },
-    ];
-
+    const XYZ_OFFSET = 0;
+    const DOP_OFFSET = 16;
     const numPoints = data.length / originalStride;
 
-    // Calculate new stride with RGBA fields
-    const newStride = originalStride + 4; // Adding 4 bytes for RGBA
-
-    // Extract Doppler values from all points
-    const dopplerValues = extractDopplerValues(
+    // Extract XYZ and Doppler values
+    const { xyz, dopplerValues } = extractXYZAndDoppler(
         data,
         originalStride,
         numPoints,
+        XYZ_OFFSET,
         DOP_OFFSET,
     );
 
-    // Create color map and convert Doppler values to RGB colors
+    // Map Doppler values to RGB colors
     const colorMap = createLinearColorMap(DOPPLER_COLORS);
     const rgbColors = mapDopplerToRGB(
         colorMap,
@@ -337,14 +336,8 @@ function processROS2PointCloud(
         globalVars.max_dop_bound,
     );
 
-    // Create the new point cloud data with added color information
-    const coloredPointCloud = createColorizedPointCloud(
-        data,
-        rgbColors,
-        originalStride,
-        newStride,
-        numPoints,
-    );
+    // Create XYZRGBA point cloud
+    const xyzrgbaData = createXYZRGBAPointCloud(xyz, rgbColors, numPoints);
 
     // Return the modified point cloud message
     return {
@@ -357,9 +350,9 @@ function processROS2PointCloud(
             position: { x: 0, y: 0, z: 0 },
             orientation: { x: 0, y: 0, z: 0, w: 1 },
         },
-        point_stride: newStride,
-        fields: POINT_CLOUD_FIELDS,
-        data: coloredPointCloud,
+        point_stride: XYZRGBA_STRIDE,
+        fields: XYZRGBA_FIELDS,
+        data: xyzrgbaData,
     };
 }
 
@@ -367,7 +360,6 @@ function processROS2PointCloud(
  * Processes an API PointCloud message and adds color information based on Doppler values
  * @param api_message API PointCloud message
  * @param globalVars Global variables for Doppler bounds
- * @param DOP_OFFSET Offset of the Doppler field in bytes
  * @returns Modified PointCloud message with color information
  */
 function processAPIPointCloud(
@@ -382,24 +374,26 @@ function processAPIPointCloud(
         fields: any[];
     },
     globalVars: GlobalVariables,
-    DOP_OFFSET: number,
 ) {
+    const XYZ_OFFSET = 8;
+    const DOP_OFFSET = 20;
+
     // Get the original point cloud data as a Uint8Array
     const {
         data,
         point_stride: old_strid,
-        fields: cloud_fields,
         timestamp: ts,
         frame_id: fid,
     } = api_message;
 
-    const new_strid = old_strid + 4; // Adding 4 bytes for RGBA
     const numPoints = Math.floor(data.length / old_strid);
 
-    const dopplerValues = extractDopplerValues(
+    // Extract XYZ and Doppler values
+    const { xyz, dopplerValues } = extractXYZAndDoppler(
         data,
         old_strid,
         numPoints,
+        XYZ_OFFSET,
         DOP_OFFSET,
     );
 
@@ -411,14 +405,8 @@ function processAPIPointCloud(
         globalVars.max_dop_bound,
     );
 
-    // Create new point cloud with color data
-    const newPointCloud = createColorizedPointCloud(
-        data,
-        dopplerColors,
-        old_strid,
-        new_strid,
-        numPoints,
-    );
+    // Create XYZRGBA point cloud
+    const xyzrgbaData = createXYZRGBAPointCloud(xyz, dopplerColors, numPoints);
 
     // Return the modified point cloud message
     return {
@@ -431,13 +419,8 @@ function processAPIPointCloud(
             position: { x: 0, y: 0, z: 0 },
             orientation: { x: 0, y: 0, z: 0, w: 1 },
         },
-        point_stride: new_strid,
-        fields: cloud_fields.concat(
-            { name: "red", offset: 44, type: 1 },
-            { name: "green", offset: 45, type: 1 },
-            { name: "blue", offset: 46, type: 1 },
-            { name: "alpha", offset: 47, type: 1 },
-        ),
-        data: newPointCloud,
+        point_stride: XYZRGBA_STRIDE,
+        fields: XYZRGBA_FIELDS,
+        data: xyzrgbaData,
     };
 }

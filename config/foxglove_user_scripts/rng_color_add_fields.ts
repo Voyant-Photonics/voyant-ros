@@ -6,15 +6,6 @@
 import { Input } from "./types";
 import { PointCloud, PackedElementField } from "@foxglove/schemas";
 
-// Define constants
-const BYTE_SIZE = {
-    FLOAT32: 4,
-    UINT8: 1,
-    UINT32: 6,
-    INT32: 5,
-    FLOAT_32: 7,
-};
-
 const COLOR_MAP_SIZE = 255;
 const MAX_HUE = 360;
 const MAX_SATURATION = 100;
@@ -34,6 +25,19 @@ interface RGB {
     g: number;
     b: number;
 }
+
+// Output point cloud field structure with XYZRGBA
+const XYZRGBA_FIELDS: PackedElementField[] = [
+    { name: "x", offset: 0, type: 7 }, // FLOAT32
+    { name: "y", offset: 4, type: 7 }, // FLOAT32
+    { name: "z", offset: 8, type: 7 }, // FLOAT32
+    { name: "red", offset: 12, type: 1 }, // UINT8
+    { name: "green", offset: 13, type: 1 }, // UINT8
+    { name: "blue", offset: 14, type: 1 }, // UINT8
+    { name: "alpha", offset: 15, type: 1 }, // UINT8
+];
+
+const XYZRGBA_STRIDE = 16;
 
 /**
  * Converts HSV color values to RGB
@@ -98,16 +102,6 @@ function hsvToRgb(h: number, s: number, v: number): RGB {
 }
 
 /**
- * Converts a Uint8Array (4 bytes) to a Float32 value
- * @param bytes - Uint8Array containing 4 bytes
- * @returns Float32 value
- */
-function uint8ArrayToFloat32(bytes: Uint8Array): number {
-    const dataView = new DataView(bytes.buffer);
-    return dataView.getFloat32(0, true); // true for little-endian
-}
-
-/**
  * Creates a cyclic color map with evenly distributed hues
  * @param numColors - Number of colors in the map
  * @param saturation - Saturation value (0-100)
@@ -167,22 +161,6 @@ const rangeColorMap: number[][] = createCyclicColorMap(
     MAX_SATURATION,
     MAX_VALUE,
 );
-
-// Define point cloud field structure
-const pointCloudFields: PackedElementField[] = [
-    { name: "x", offset: 0, type: BYTE_SIZE.FLOAT_32 },
-    { name: "y", offset: 4, type: BYTE_SIZE.FLOAT_32 },
-    { name: "z", offset: 8, type: BYTE_SIZE.FLOAT_32 },
-    { name: "v", offset: 16, type: BYTE_SIZE.FLOAT_32 },
-    { name: "snr", offset: 20, type: BYTE_SIZE.FLOAT_32 },
-    { name: "drop_reason", offset: 24, type: 2 },
-    { name: "timestamp_nsecs", offset: 26, type: BYTE_SIZE.UINT32 },
-    { name: "point_idx", offset: 30, type: BYTE_SIZE.INT32 },
-    { name: "red", offset: 48, type: BYTE_SIZE.UINT8 },
-    { name: "green", offset: 49, type: BYTE_SIZE.UINT8 },
-    { name: "blue", offset: 50, type: BYTE_SIZE.UINT8 },
-    { name: "alpha", offset: 51, type: BYTE_SIZE.UINT8 },
-];
 
 /**
  * Main script function that processes the point cloud data
@@ -253,6 +231,84 @@ export default function script(
 }
 
 /**
+ * Extracts XYZ and range values from point cloud data
+ * Range is calculated as sqrt(x^2 + y^2 + z^2)
+ * @param data Raw point cloud data
+ * @param stride Point stride in bytes
+ * @param numPoints Number of points in the cloud
+ * @param XYZ_OFFSET Offset of the XYZ fields in bytes
+ * @returns Object containing xyz positions and range values
+ */
+function extractXYZAndRange(
+    data: Uint8Array,
+    stride: number,
+    numPoints: number,
+    XYZ_OFFSET: number,
+): { xyz: Float32Array; rangeValues: number[] } {
+    const xyz = new Float32Array(numPoints * 3);
+    const rangeValues: number[] = [];
+
+    for (let i = 0; i < numPoints; i++) {
+        const pointOffset = i * stride;
+
+        // Extract XYZ (12 bytes starting at XYZ_OFFSET)
+        const xyzView = new DataView(
+            data.buffer,
+            data.byteOffset + pointOffset,
+            stride,
+        );
+        const x = xyzView.getFloat32(XYZ_OFFSET, true);
+        const y = xyzView.getFloat32(XYZ_OFFSET + 4, true);
+        const z = xyzView.getFloat32(XYZ_OFFSET + 8, true);
+
+        xyz[i * 3] = x;
+        xyz[i * 3 + 1] = y;
+        xyz[i * 3 + 2] = z;
+
+        // Calculate range
+        const range = Math.sqrt(x * x + y * y + z * z);
+        rangeValues.push(range);
+    }
+
+    return { xyz, rangeValues };
+}
+
+/**
+ * Creates XYZRGBA point cloud from positions and colors
+ * @param xyz Float32Array of XYZ positions (length = numPoints * 3)
+ * @param colors RGB color values for each point
+ * @param numPoints Number of points in the cloud
+ * @returns New Uint8Array with XYZRGBA data
+ */
+function createXYZRGBAPointCloud(
+    xyz: Float32Array,
+    colors: number[][],
+    numPoints: number,
+): Uint8Array {
+    const newSize = numPoints * XYZRGBA_STRIDE;
+    const newData = new Uint8Array(newSize);
+
+    for (let i = 0; i < numPoints; i++) {
+        const offset = i * XYZRGBA_STRIDE;
+
+        // Write XYZ (12 bytes)
+        const xyzView = new DataView(newData.buffer, offset, 12);
+        xyzView.setFloat32(0, xyz[i * 3], true); // x
+        xyzView.setFloat32(4, xyz[i * 3 + 1], true); // y
+        xyzView.setFloat32(8, xyz[i * 3 + 2], true); // z
+
+        // Write RGBA (4 bytes)
+        const color = i < colors.length ? colors[i] : [0, 0, 0];
+        newData[offset + 12] = color[0] || 0; // r
+        newData[offset + 13] = color[1] || 0; // g
+        newData[offset + 14] = color[2] || 0; // b
+        newData[offset + 15] = ALPHA_MAX; // alpha
+    }
+
+    return newData;
+}
+
+/**
  * Processes a ROS2 PointCloud2 message and adds color information based on range values
  * @param data Point cloud data as Uint8Array
  * @param originalStride Original point stride in bytes
@@ -272,20 +328,16 @@ function processROS2PointCloud(
     },
     globalVars: GlobalVariables,
 ) {
-    const originalData = data;
-    const newStride = originalStride + 4 * BYTE_SIZE.UINT8; // Adding RGBA fields (4 bytes)
-    const numPoints = Math.floor(originalData.length / originalStride);
-    const newSize = numPoints * newStride;
+    const XYZ_OFFSET = 0;
+    const numPoints = Math.floor(data.length / originalStride);
 
-    // Extract range values from the original point cloud
-    const rangeValues: number[] = [];
-    for (let i = 0; i < originalData.length; i += originalStride) {
-        if (i + BYTE_SIZE.FLOAT32 <= originalData.length) {
-            const rangeBytes = new Uint8Array(BYTE_SIZE.FLOAT32);
-            rangeBytes.set(originalData.subarray(i, i + BYTE_SIZE.FLOAT32));
-            rangeValues.push(uint8ArrayToFloat32(rangeBytes));
-        }
-    }
+    // Extract XYZ and range values
+    const { xyz, rangeValues } = extractXYZAndRange(
+        data,
+        originalStride,
+        numPoints,
+        XYZ_OFFSET,
+    );
 
     // Map range values to colors
     const colorValues = mapRangeToRgb(
@@ -294,37 +346,10 @@ function processROS2PointCloud(
         globalVars.range_band,
     );
 
-    // Create new data buffer for the output point cloud
-    const newPointCloudData = new Uint8Array(newSize);
+    // Create XYZRGBA point cloud
+    const xyzrgbaData = createXYZRGBAPointCloud(xyz, colorValues, numPoints);
 
-    // Copy original data and add color information
-    for (let i = 0; i < numPoints; i++) {
-        const originalOffset = i * originalStride;
-        const newOffset = i * newStride;
-
-        // Copy original point data
-        newPointCloudData.set(
-            originalData.subarray(
-                originalOffset,
-                originalOffset + originalStride,
-            ),
-            newOffset,
-        );
-
-        // Add color information
-        const color = i < colorValues.length ? colorValues[i] : [0, 0, 0];
-        newPointCloudData.set(
-            [
-                color[0] || 0, // Red
-                color[1] || 0, // Green
-                color[2] || 0, // Blue
-                ALPHA_MAX, // Alpha (fully opaque)
-            ],
-            newOffset + 48,
-        );
-    }
-
-    // Return the modified point cloud
+    // Return the modified point cloud message
     return {
         timestamp: {
             sec: ros_header.stamp.sec,
@@ -335,9 +360,9 @@ function processROS2PointCloud(
             position: { x: 0, y: 0, z: 0 },
             orientation: { x: 0, y: 0, z: 0, w: 1 },
         },
-        point_stride: newStride,
-        fields: pointCloudFields,
-        data: newPointCloudData,
+        point_stride: XYZRGBA_STRIDE,
+        fields: XYZRGBA_FIELDS,
+        data: xyzrgbaData,
     };
 }
 
@@ -360,22 +385,17 @@ function processAPIPointCloud(
     },
     globalVars: GlobalVariables,
 ) {
-    // Get the original point cloud data as a Uint8Array
+    const XYZ_OFFSET = 8;
     const { data, point_stride: old_strid } = api_message;
-    const new_strid = old_strid + 4 * BYTE_SIZE.UINT8; // Adding RGBA fields (4 bytes)
     const numPoints = Math.floor(data.length / old_strid);
-    const new_size = numPoints * new_strid;
-    const new_point_cloud_data = new Uint8Array(new_size);
 
-    // Extract range values from the original point cloud
-    const rangeValues: number[] = [];
-    for (let i = 0; i < data.length; i += old_strid) {
-        if (i + 12 <= data.length) {
-            const rangeBytes = new Uint8Array(BYTE_SIZE.FLOAT32);
-            rangeBytes.set(data.subarray(i + 8, i + 12));
-            rangeValues.push(uint8ArrayToFloat32(rangeBytes));
-        }
-    }
+    // Extract XYZ and range values
+    const { xyz, rangeValues } = extractXYZAndRange(
+        data,
+        old_strid,
+        numPoints,
+        XYZ_OFFSET,
+    );
 
     // Map range values to colors
     const colorValues = mapRangeToRgb(
@@ -384,29 +404,8 @@ function processAPIPointCloud(
         globalVars.range_band,
     );
 
-    // Copy original data and add color information
-    for (let i = 0; i < numPoints; i++) {
-        const originalOffset = i * old_strid;
-        const newOffset = i * new_strid;
-
-        // Copy original point data
-        new_point_cloud_data.set(
-            data.subarray(originalOffset, originalOffset + old_strid),
-            newOffset,
-        );
-
-        // Add color information
-        const color = i < colorValues.length ? colorValues[i] : [0, 0, 0];
-        new_point_cloud_data.set(
-            [
-                color[0] || 0, // Red
-                color[1] || 0, // Green
-                color[2] || 0, // Blue
-                ALPHA_MAX, // Alpha (fully opaque)
-            ],
-            newOffset + old_strid,
-        );
-    }
+    // Create XYZRGBA point cloud
+    const xyzrgbaData = createXYZRGBAPointCloud(xyz, colorValues, numPoints);
 
     // Return the modified point cloud message
     return {
@@ -419,13 +418,8 @@ function processAPIPointCloud(
             position: { x: 0, y: 0, z: 0 },
             orientation: { x: 0, y: 0, z: 0, w: 1 },
         },
-        point_stride: new_strid,
-        fields: api_message.fields.concat(
-            { name: "red", offset: 44, type: 1 },
-            { name: "green", offset: 45, type: 1 },
-            { name: "blue", offset: 46, type: 1 },
-            { name: "alpha", offset: 47, type: 1 },
-        ),
-        data: new_point_cloud_data,
+        point_stride: XYZRGBA_STRIDE,
+        fields: XYZRGBA_FIELDS,
+        data: xyzrgbaData,
     };
 }
