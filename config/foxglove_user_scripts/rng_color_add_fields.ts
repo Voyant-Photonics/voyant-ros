@@ -232,7 +232,7 @@ export default function script(
 
 /**
  * Extracts XYZ and range values from point cloud data
- * Range is calculated as sqrt(x^2 + y^2 + z^2)
+ * "Range" is actually just the x axis value
  * @param data Raw point cloud data
  * @param stride Point stride in bytes
  * @param numPoints Number of points in the cloud
@@ -266,8 +266,7 @@ function extractXYZAndRange(
         xyz[i * 3 + 2] = z;
 
         // Calculate range
-        const range = Math.sqrt(x * x + y * y + z * z);
-        rangeValues.push(range);
+        rangeValues.push(x);
     }
 
     return { xyz, rangeValues };
