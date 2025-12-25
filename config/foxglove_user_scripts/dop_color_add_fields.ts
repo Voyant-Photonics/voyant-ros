@@ -309,10 +309,10 @@ function processROS2PointCloud(
         { name: "drop_reason", offset: 24, type: FIELD_TYPE.UINT16 },
         { name: "timestamp_nsecs", offset: 26, type: FIELD_TYPE.INT32 },
         { name: "point_idx", offset: 30, type: FIELD_TYPE.UINT32 },
-        { name: "red", offset: 48, type: FIELD_TYPE.UINT8 },
-        { name: "green", offset: 49, type: FIELD_TYPE.UINT8 },
-        { name: "blue", offset: 50, type: FIELD_TYPE.UINT8 },
-        { name: "alpha", offset: 51, type: FIELD_TYPE.UINT8 },
+        { name: "red", offset: originalStride, type: FIELD_TYPE.UINT8 },
+        { name: "green", offset: originalStride + 1, type: FIELD_TYPE.UINT8 },
+        { name: "blue", offset: originalStride + 2, type: FIELD_TYPE.UINT8 },
+        { name: "alpha", offset: originalStride + 3, type: FIELD_TYPE.UINT8 },
     ];
 
     const numPoints = data.length / originalStride;
