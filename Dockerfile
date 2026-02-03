@@ -17,6 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-${ROS_DISTRO}-ros2launch \
     ros-${ROS_DISTRO}-pcl-ros \
     ros-${ROS_DISTRO}-rosbag2 \
+    ros-${ROS_DISTRO}-ament-index-cpp \
     libpcl-dev \
     build-essential \
     apt-utils \
