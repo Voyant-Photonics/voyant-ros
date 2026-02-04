@@ -22,6 +22,7 @@ endif()
 # Dependencies
 # ==============================
 find_package(ament_cmake REQUIRED)
+find_package(ament_index_cpp REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(PCL REQUIRED COMPONENTS common)
@@ -57,6 +58,12 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 # Executables & Link libraries
 # ==============================
 add_executable(voyant_sensor_node src/main.cpp src/sensor_driver.cpp)
+ament_target_dependencies(voyant_sensor_node
+  rclcpp
+  sensor_msgs
+  pcl_conversions
+  ament_index_cpp
+)
 target_link_libraries(voyant_sensor_node
   voyant-api::voyant-api
   ${PCL_LIBRARIES}
@@ -64,6 +71,13 @@ target_link_libraries(voyant_sensor_node
 
 # ======= bin2mcap converter =======
 add_executable(voyant_bin_to_mcap src/bin_to_mcap.cpp src/voyant_bin_to_mcap.cpp)
+ament_target_dependencies(voyant_bin_to_mcap
+  rclcpp
+  sensor_msgs
+  pcl_conversions
+  ament_index_cpp
+  rosbag2_cpp
+)
 target_link_libraries(voyant_bin_to_mcap
   voyant-api::voyant-api
   ${PCL_LIBRARIES}
@@ -75,6 +89,13 @@ set_target_properties(voyant_bin_to_mcap
 
 # ======= mcap2bin converter =======
 add_executable(voyant_mcap_to_bin src/mcap_to_bin.cpp src/voyant_mcap_to_bin.cpp)
+ament_target_dependencies(voyant_mcap_to_bin
+  rclcpp
+  sensor_msgs
+  pcl_conversions
+  ament_index_cpp
+  rosbag2_cpp
+)
 target_link_libraries(voyant_mcap_to_bin
   voyant-api::voyant-api
   ${PCL_LIBRARIES}
@@ -82,28 +103,6 @@ target_link_libraries(voyant_mcap_to_bin
 set_target_properties(voyant_mcap_to_bin
   PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
-)
-
-# ==============================
-# Package dependencies
-# ==============================
-ament_target_dependencies(voyant_sensor_node
-  rclcpp
-  sensor_msgs
-  pcl_conversions
-)
-ament_target_dependencies(voyant_bin_to_mcap
-  rclcpp
-  rosbag2_cpp
-  sensor_msgs
-  pcl_conversions
-)
-
-ament_target_dependencies(voyant_mcap_to_bin
-  pcl_conversions
-  rclcpp
-  rosbag2_cpp
-  sensor_msgs
 )
 
 # ==============================
