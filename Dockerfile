@@ -12,7 +12,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     BUILD_HOME=/var/lib/build
 
 # Install dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends --fix-missing \
     python3-colcon-common-extensions \
     ros-${ROS_DISTRO}-ros2launch \
     ros-${ROS_DISTRO}-pcl-ros \
