@@ -61,12 +61,14 @@ RUN ARCH=$(dpkg --print-architecture) && \
         jq -r '.assets[] | select(.name | endswith(".tar.gz")) | .browser_download_url' | head -n 1) && \
     if [ -z "$TARBALL_URL" ]; then echo "No .tar.gz asset found in latest release" >&2; exit 1; fi && \
     wget -O /tmp/voyant-api.tar.gz "$TARBALL_URL" && \
-    tar -xzf /tmp/voyant-api.tar.gz -C /tmp && \
-    API_DEB=$(find /tmp -name "voyant-api_*${ARCH}.deb" | head -n 1) && \
-    DEV_DEB=$(find /tmp -name "voyant-api-dev_*${ARCH}.deb" | head -n 1) && \
+    mkdir -p /tmp/voyant-api-extract && \
+    tar -xzf /tmp/voyant-api.tar.gz -C /tmp/voyant-api-extract && \
+    API_DEB=$(find /tmp/voyant-api-extract -name "voyant-api_*${ARCH}.deb" | head -n 1) && \
+    DEV_DEB=$(find /tmp/voyant-api-extract -name "voyant-api-dev_*${ARCH}.deb" | head -n 1) && \
     if [ -z "$API_DEB" ] || [ -z "$DEV_DEB" ]; then echo "Required .deb packages for ARCH=$ARCH not found" >&2; exit 1; fi && \
     apt-get install -y "$API_DEB" "$DEV_DEB" && \
-    rm -rf /tmp/voyant-api* /var/lib/apt/lists/*
+    apt-get clean && \
+    rm -rf /tmp/voyant-api.tar.gz /tmp/voyant-api-extract /var/lib/apt/lists/*
 
 # Create a workspace directory
 WORKDIR /ros2_ws/src
