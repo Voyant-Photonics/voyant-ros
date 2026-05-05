@@ -5,7 +5,7 @@
 
 #include "voyant_ros/mcap_to_bin.hpp"
 #include <iostream>
-#include <logging_utils.hpp>
+#include <logging_utils_ffi.hpp>
 
 int main(int argc, char *argv[])
 {

@@ -7,11 +7,12 @@
 
 #include "voyant_ros/conversion_utils.hpp"
 #include "voyant_ros/msg/voyant_device_metadata.hpp"
+#include <carbon_client.hpp>
+#include <carbon_config.hpp>
 #include <chrono>
 #include <iostream>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
-#include <voyant_client.hpp>
 
 namespace voyant_ros
 {
@@ -62,7 +63,7 @@ private:
   rclcpp::Publisher<voyant_ros::msg::VoyantDeviceMetadata>::SharedPtr metadata_pub;
 
   // Voyant client
-  std::shared_ptr<VoyantClient> client_;
+  std::shared_ptr<CarbonClient> client_;
 
   // Sensor config
   SensorParams config_;

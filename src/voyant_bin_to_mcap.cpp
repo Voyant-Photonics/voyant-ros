@@ -5,7 +5,7 @@
 // See the LICENSE file in the repository root for full license text.
 
 #include "voyant_ros/bin_to_mcap.hpp"
-#include <logging_utils.hpp>
+#include <logging_utils_ffi.hpp>
 
 int main(int argc, char *argv[])
 {

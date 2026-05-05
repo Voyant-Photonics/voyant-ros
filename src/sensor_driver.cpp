@@ -34,8 +34,11 @@ VoyantSensorDriver::VoyantSensorDriver()
 
 VoyantSensorDriver::~VoyantSensorDriver()
 {
-  // Stop the ros node
   RCLCPP_INFO(get_logger(), "[+] Shutting down the node");
+  if(client_)
+  {
+    client_->stop();
+  }
   rclcpp::shutdown();
 }
 
@@ -61,7 +64,7 @@ void VoyantSensorDriver::getParams()
 void VoyantSensorDriver::initialize()
 {
   RCLCPP_INFO(get_logger(), "[+] Initializing Voyant Sensor Driver");
-  VoyantClient::setupSignalHandling();
+  CarbonClient::setupSignalHandling();
 
   // Try to connect to the sensor
   try
@@ -70,19 +73,25 @@ void VoyantSensorDriver::initialize()
     RCLCPP_INFO(get_logger(),
                 "[+] Using point format: %s",
                 pointFormatToString(config_.point_format).c_str());
-    client_ = std::make_shared<VoyantClient>(config_.binding_address,
-                                             config_.multicast_group,
-                                             config_.interface_address);
 
-    // Check if the client is connected
-    if(!client_->isValid())
+    CarbonConfig carbon_cfg;
+    carbon_cfg.setBindAddr(config_.binding_address)
+        .setGroupAddr(config_.multicast_group)
+        .setInterfaceAddr(config_.interface_address)
+        .setKeepInvalidPoints(!config_.valid_only_filter);
+
+    client_ = std::make_shared<CarbonClient>(carbon_cfg);
+
+    if(!client_->start())
     {
-      RCLCPP_ERROR(get_logger(), "[-] Failed to initialize the Voyant Sensor Driver");
+      RCLCPP_ERROR(get_logger(), "[-] Failed to start the Carbon client");
       rclcpp::shutdown();
+      return;
     }
-    while(!VoyantClient::isTerminated())
+
+    while(client_->isRunning() && !CarbonClient::isTerminated())
     {
-      if(client_->tryReceiveNextFrame())
+      if(client_->tryReceiveFrame())
       {
         VoyantFrameWrapper &frame = client_->latestFrame();
         const VoyantHeaderWrapper header_msg = frame.header();
@@ -90,6 +99,7 @@ void VoyantSensorDriver::initialize()
 
         return; // Successful connection
       }
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
     throw std::runtime_error("[-] Sensor connection failed");
   }
@@ -107,12 +117,12 @@ sensor_msgs::msg::PointCloud2 VoyantSensorDriver::pointDatatoRosMsg(VoyantFrameW
 void VoyantSensorDriver::publishPointCloud()
 {
   bool published_metadata = false;
-  while(rclcpp::ok() && !client_->isTerminated())
+  while(rclcpp::ok() && client_->isRunning() && !CarbonClient::isTerminated())
   {
     bool frame_received = false;
     try
     {
-      if(client_->tryReceiveNextFrame())
+      if(client_->tryReceiveFrame())
       {
         VoyantFrameWrapper &frame = client_->latestFrame();
         sensor_msgs::msg::PointCloud2 cloud_msg = this->pointDatatoRosMsg(frame);
