@@ -47,7 +47,7 @@ void VoyantSensorDriver::getParams()
   this->declare_parameter<std::string>("binding_address", "0.0.0.0:4444");
   this->declare_parameter<std::string>("multicast_group", "224.0.0.0");
   this->declare_parameter<std::string>("interface_address", "127.0.0.1");
-  this->declare_parameter<bool>("spn_filter", true);
+  this->declare_parameter<bool>("valid_only_filter", false);
   this->declare_parameter<int>("timestamp_mode", 0); // Default to TIME_FROM_SENSOR (0)
   this->declare_parameter<std::string>("frame_id", "lidar_sensor");
   this->declare_parameter<int>("point_format", 1); // Default to MDL_STANDARD (1)
@@ -55,7 +55,7 @@ void VoyantSensorDriver::getParams()
   config_.binding_address = this->get_parameter("binding_address").as_string();
   config_.multicast_group = this->get_parameter("multicast_group").as_string();
   config_.interface_address = this->get_parameter("interface_address").as_string();
-  config_.valid_only_filter = this->get_parameter("spn_filter").as_bool();
+  config_.valid_only_filter = this->get_parameter("valid_only_filter").as_bool();
   config_.timestamp_mode = this->get_parameter("timestamp_mode").as_int();
   config_.lidar_frame_id = this->get_parameter("frame_id").as_string();
   config_.point_format = static_cast<PointFormat>(this->get_parameter("point_format").as_int());
@@ -84,9 +84,9 @@ void VoyantSensorDriver::initialize()
 
     if(!client_->start())
     {
-      RCLCPP_ERROR(get_logger(), "[-] Failed to start the Carbon client");
-      rclcpp::shutdown();
-      return;
+      throw std::runtime_error("Failed to start the Carbon client (port already bound, "
+                               "invalid interface_address, or sensor unreachable — "
+                               "set RUST_LOG=debug for details)");
     }
 
     while(client_->isRunning() && !CarbonClient::isTerminated())
@@ -106,6 +106,7 @@ void VoyantSensorDriver::initialize()
   catch(const std::exception &e)
   {
     RCLCPP_ERROR(get_logger(), "[-] Connection failed: %s", e.what());
+    throw;
   }
 }
 

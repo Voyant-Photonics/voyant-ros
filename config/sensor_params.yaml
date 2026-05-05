@@ -18,7 +18,7 @@
     #  - "192.168.20.100": Your network interface's IP address
     binding_address: '0.0.0.0:5678'
     multicast_group: '224.0.0.0'
-    interface_address: '127.0.0.1'
+    interface_address: '192.168.1.100'
 
     ## Shared parameters
     # Point format selection
@@ -33,7 +33,7 @@
     timestamp_mode: 0
 
     # Enable Single Point Noise filter (+ other filtering of invalid points)
-    valid_only_filter: false
+    valid_only_filter: true
 
     ## The below params are shared with the bin_to_mcap conversion
     frame_id: 'voyant_sensor'
