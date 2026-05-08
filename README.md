@@ -6,7 +6,8 @@ For Docker instructions on other ROS2 distributions and RMW implementations, ref
 
 ## Supported device
 
-- Meadowlark: [Specsheet](https://voyantphotonics.com/products/) (specsheet coming soon...)
+- Carbon: [Specsheet](https://voyantphotonics.com/products/) (specsheet coming soon...)
+- Meadowlark: [Specsheet](https://voyantphotonics.com/products/) (specsheet coming soon...) — for Meadowlark sensors, please use the previous release [`v0.2.2`](https://github.com/Voyant-Photonics/voyant-ros/releases/v0.2.2) of this package.
 
 ## Pre-requisites
 
@@ -60,7 +61,7 @@ docker build --build-arg "VIZ_BRIDGE=true" \
 ```
 
 > **Note**
-> The `VIZ_BRIDGE` argument is optional and can be set to `true` to install the Foxglove bridge for visualization. The default value is `false`. If the argument is set to `true`, the Foxglove bridge will be installed. Follow the instructions from the [Visualization Guide](https://voyant-photonics.github.io/02_getting-started/visualization.html#importing-configuration-files) to configure Foxglove for pointcloud visualization in separate terminal or in a web browser.
+> The `VIZ_BRIDGE` argument is optional and can be set to `true` to install the Foxglove bridge for visualization. The default value is `false`. If the argument is set to `true`, the Foxglove bridge will be installed. Follow the instructions from the [Visualization Guide](https://voyant-photonics.github.io/foxglove/) to configure Foxglove for pointcloud visualization in separate terminal or in a web browser.
 
 To run the Docker container, execute the following command:
 
@@ -79,6 +80,19 @@ colcon build --symlink-install --packages-select voyant_ros
 ```
 
 ## Running the package
+
+> 🚧 **Temporary fix: when using `voyant-api` 0.9.2 or later (Carbon sensor)**
+>
+> The Carbon client requires the sensor to be brought up via Voyant Visualizer
+> before the ROS node can connect. Until this is integrated into
+> the driver, follow these steps on every power cycle of the sensor:
+>
+> 1. Bring up the sensor following the sensor bring-up steps in the guide.
+> 2. Open the Voyant visualizer and confirm you see a live pointcloud
+>    from the sensor.
+> 3. Close the visualizer (it must release the multicast socket before
+>    the ROS driver can bind to it).
+> 4. Build and run the ROS node using the steps below.
 
 ### 1. Source the ROS2 workspace
 ```bash
@@ -153,7 +167,7 @@ The launch command will start the driver and publish pointcloud data on the `/po
 2. Connect Foxglove to the default Foxglove websocket server at `ws://localhost:8765`
 3. In the top right corner of the Foxglove GUI title bar, click on the `Layout` button and import the configuration file from `config/voyant_ros_foxglove_cfg.json`
 
-This will load a layout with pointcloud data visualization, offering three different color maps. For more information on the colormap options, refer to the [Foxglove Colormap Documentation](https://voyant-photonics.github.io/02_getting-started/visualization.html).
+This will load a layout with pointcloud data visualization, offering three different color maps. For more information on the colormap options, refer to the [Foxglove Colormap Documentation](https://voyant-photonics.github.io/foxglove/).
 
 ## Managing the Foxglove Layout Config
 

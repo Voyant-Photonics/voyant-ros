@@ -4,8 +4,8 @@
 // See the LICENSE file in the repository root for full license text.
 
 #include "voyant_ros/mcap_to_bin.hpp"
+#include <cbindings/logging_utils_ffi.hpp>
 #include <iostream>
-#include <logging_utils.hpp>
 
 int main(int argc, char *argv[])
 {
