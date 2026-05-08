@@ -10,7 +10,7 @@
     # against a Carbon sensor:
     # - "0.0.0.0:5678": Local binding address and port (Carbon default)
     # - "224.0.0.0": Multicast group address
-    # - "127.0.0.1": Interface address (localhost/loopback)
+    # - "192.168.1.100": Interface address (localhost/loopback)
     #
     # When connecting to an actual Carbon sensor
     #  - "0.0.0.0:5678": Binds to all interfaces on port 5678

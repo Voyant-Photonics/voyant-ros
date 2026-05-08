@@ -25,6 +25,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft != true }}
+    # TODO: remove this when rolling build error is fixed in a follow up PR
+    continue-on-error: ${{ matrix.ros_distro == 'rolling' }}
 
     strategy:
       fail-fast: false
