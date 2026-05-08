@@ -85,8 +85,7 @@ void VoyantSensorDriver::initialize()
     if(!client_->start())
     {
       throw std::runtime_error("Failed to start the Carbon client (port already bound, "
-                               "invalid interface_address, or sensor unreachable — "
-                               "set RUST_LOG=debug for details)");
+                               "invalid interface_address, or sensor unreachable)");
     }
 
     while(client_->isRunning() && !CarbonClient::isTerminated())
