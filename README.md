@@ -1,5 +1,12 @@
 # Official ROS drivers for Voyant Lidars
 
+[![CI](https://github.com/Voyant-Photonics/voyant-ros/actions/workflows/docker-image.yml/badge.svg?branch=main)](https://github.com/Voyant-Photonics/voyant-ros/actions/workflows/docker-image.yml)
+![ROS 2](https://img.shields.io/badge/ROS%202-Humble%20%7C%20Jazzy-blue)
+![Ubuntu](https://img.shields.io/badge/Ubuntu-22.04%20%7C%2024.04-orange)
+![voyant-api](https://img.shields.io/badge/voyant--api-%E2%89%A5%200.9.2-green)
+[![License](https://img.shields.io/github/license/Voyant-Photonics/voyant-ros)](LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/Voyant-Photonics/voyant-ros)](https://github.com/Voyant-Photonics/voyant-ros/releases)
+
 This ROS package provides support for Voyant sensors targeting the ROS2 Humble distribution. Configure the sensor (client) address using the `config/sensor_params.yaml` file. This package only supports `ROS2 Humble` and `Ubuntu 22.04` for now, and it is not guaranteed to work with other ROS2 distributions or operating systems. Support for other distributions and operating systems will be added in the future.
 
 For Docker instructions on other ROS2 distributions and RMW implementations, refer to the [Docker Instructions](#docker-instructions) section.
@@ -51,11 +58,11 @@ To build the Docker image, run the following command from the repo root:
 docker build --build-arg "VIZ_BRIDGE=true" -t voyant_ros2_container .
 ```
 
-The Docker image has been tested on Ubuntu 22.04 and ROS2 distributions like Humble, Iron, Rolling and Jazzy. RMW implementations like FastRTPS and CycloneDDS have been tested with the Docker image.
+The Docker image has been tested on Ubuntu 22.04 and ROS2 distributions Humble and Jazzy. RMW implementations like FastRTPS and CycloneDDS have been tested with the Docker image.
 
 ```bash
 docker build --build-arg "VIZ_BRIDGE=true" \
-             --build-arg "ROS_DISTRO=rolling" \ # humble, iron, rolling, jazzy
+             --build-arg "ROS_DISTRO=jazzy" \ # humble, jazzy
              --build-arg "RMW_IMPLEMENTATION=rmw_cyclonedds_cpp" \ # rmw_fastrtps_cpp, rmw_cyclonedds_cpp
              -t voyant_ros2_container .
 ```

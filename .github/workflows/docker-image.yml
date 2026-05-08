@@ -31,13 +31,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ros_distro: [humble, iron, rolling, jazzy]
+        # iron dropped: reached EOL in November 2024.
+        # rolling dropped: upstream packaging churn (e.g. inconsistent
+        # message_filters / pcl_conversions imported-target exports against
+        # std_msgs / rosidl_buffer) makes CI unreliable.
+        ros_distro: [humble, jazzy]
         rmw: [rmw_fastrtps_cpp, rmw_cyclonedds_cpp]
-        exclude:
-          - ros_distro: iron
-            rmw: rmw_fastrtps_cpp
-          - ros_distro: iron
-            rmw: rmw_cyclonedds_cpp
 
     steps:
       - name: Checkout the repository
