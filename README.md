@@ -6,7 +6,8 @@ For Docker instructions on other ROS2 distributions and RMW implementations, ref
 
 ## Supported device
 
-- Meadowlark: [Specsheet](https://voyantphotonics.com/products/) (specsheet coming soon...)
+- Carbon: [Specsheet](https://voyantphotonics.com/products/) (specsheet coming soon...)
+- Meadowlark: [Specsheet](https://voyantphotonics.com/products/) (specsheet coming soon...) — for Meadowlark sensors, please use the previous release [`v0.4.4`](https://github.com/Voyant-Photonics/voyant-ros/releases/tag/v0.4.4) of this package.
 
 ## Pre-requisites
 
@@ -79,6 +80,20 @@ colcon build --symlink-install --packages-select voyant_ros
 ```
 
 ## Running the package
+
+> 🚧 **Temporary fix: when using `voyant-api` 0.9.2 or later (Carbon sensor)** 🔧
+>
+> The Carbon client requires the sensor to be brought up via the SDK
+> tooling before the ROS node can connect. Until this is integrated into
+> the driver, follow these steps each time before launching:
+>
+> 1. Bring up the sensor following the [sensor bringup steps in the
+>    Voyant SDK guide](https://voyant-photonics.github.io/02_getting-started/installation.html).
+> 2. Open the Voyant visualizer and confirm you see a live pointcloud
+>    from the sensor.
+> 3. Close the visualizer (it must release the multicast socket before
+>    the ROS driver can bind to it).
+> 4. Build and run the ROS node using the steps below.
 
 ### 1. Source the ROS2 workspace
 ```bash

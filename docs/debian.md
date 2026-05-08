@@ -146,7 +146,7 @@ Run the mock points stream in terminal 2:
 
 ```bash
 docker exec -it voyant_ros_container bash
-voyant_points_mock_stream --bind-addr 127.0.0.1:0 --group-addr 224.0.0.0:4444
+voyant_points_mock_stream --bind-addr 127.0.0.1:0 --group-addr 224.0.0.0:5678
 ```
 
 Run the ROS2 foxglove bridge in terminal 3:

@@ -44,9 +44,9 @@ VoyantSensorDriver::~VoyantSensorDriver()
 
 void VoyantSensorDriver::getParams()
 {
-  this->declare_parameter<std::string>("binding_address", "0.0.0.0:4444");
+  this->declare_parameter<std::string>("binding_address", "0.0.0.0:5678");
   this->declare_parameter<std::string>("multicast_group", "224.0.0.0");
-  this->declare_parameter<std::string>("interface_address", "127.0.0.1");
+  this->declare_parameter<std::string>("interface_address", "192.168.1.100");
   this->declare_parameter<bool>("valid_only_filter", false);
   this->declare_parameter<int>("timestamp_mode", 0); // Default to TIME_FROM_SENSOR (0)
   this->declare_parameter<std::string>("frame_id", "lidar_sensor");
