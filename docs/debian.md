@@ -97,7 +97,7 @@ Start from a directory that has:
 
 ```bash
 $ ls debs/
-ros-humble-voyant-ros_0.2.1-0jammy_amd64.deb  voyant-api_0.2.1-1_amd64.deb  voyant-api-dev_0.2.1-1_amd64.deb
+ros-humble-voyant-ros_0.9.2-0jammy_amd64.deb  voyant-api_0.9.2-1_amd64.deb  voyant-api-dev_0.9.2-1_amd64.deb
 ```
 
 Then run a clean ROS humble docker container:
@@ -137,17 +137,37 @@ apt install -y ros-humble-foxglove-* # for visualization
 Run the node:
 
 ```bash
-ros2 run voyant-ros voyant_sensor_node
+ros2 run voyant_ros voyant_sensor_node
 ```
 
-Run the mock points stream in terminal 2:
+> NOTE: To smoke test against the simulator (no real sensor), first override
+> the bind interface in the installed config to loopback:
+>
+> ```bash
+> sed -i "s|interface_address:.*|interface_address: '127.0.0.1'|" \
+>   /opt/ros/humble/share/voyant_ros/config/sensor_params.yaml
+> ```
+>
+> Then run the node with that params file:
+>
+> ```bash
+> ros2 run voyant_ros voyant_sensor_node --ros-args \
+>   --params-file /opt/ros/humble/share/voyant_ros/config/sensor_params.yaml
+> ```
+
+Run the Carbon simulator in terminal 2:
 
 > This can be run outside the docker if you have `voyant-api` installed on host
 
 ```bash
 docker exec -it voyant_ros_container bash
-voyant_points_mock_stream --bind-addr 127.0.0.1:0 --group-addr 224.0.0.0:5678
+voyant_carbon_simulator --bind-addr 127.0.0.1:0 --group-addr 224.0.0.0:5678
 ```
+
+> NOTE: `voyant_points_mock_stream` from prior releases produces the legacy
+> MDL wire format and will be rejected by the Carbon client with
+> `Invalid opcode: 0x00`. Use `voyant_carbon_simulator` instead. Run with
+> `--help` to confirm available flags for your installed `voyant-api` version.
 
 Run the ROS2 foxglove bridge in terminal 3:
 
