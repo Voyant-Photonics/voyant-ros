@@ -85,7 +85,7 @@ colcon build --symlink-install --packages-select voyant_ros
 >
 > The Carbon client requires the sensor to be brought up via Voyant Visualizer
 > before the ROS node can connect. Until this is integrated into
-> the driver, follow these steps each time before launching:
+> the driver, follow these steps on every power cycle of the sensor:
 >
 > 1. Bring up the sensor following the sensor bring-up steps in the guide.
 > 2. Open the Voyant visualizer and confirm you see a live pointcloud
