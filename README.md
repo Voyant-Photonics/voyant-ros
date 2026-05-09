@@ -22,35 +22,89 @@ Follow the official [ROS2 documentation](https://docs.ros.org/en/humble/Installa
 
 ## Installation
 
-### 1. Clone the repository
+Choose between installing pre-built Debian packages (simpler, Ubuntu 22.04 + ROS2 Humble only) or building from source (supports other distros via Docker).
+
+### Option A: Install from pre-built Debian packages
+
+#### 1. Install Cap'n Proto
+
+Cap'n Proto is a required runtime dependency that must be built from source. Follow the **Installation: Unix** > **From Release Tarball** instructions at [capnproto.org/install.html](https://capnproto.org/install.html). At the time of writing:
+
+```bash
+curl -O https://capnproto.org/capnproto-c++-1.1.0.tar.gz
+tar zxf capnproto-c++-1.1.0.tar.gz
+cd capnproto-c++-1.1.0
+./configure
+make -j6 check
+sudo make install
+sudo ldconfig
+cd ..
+```
+
+#### 2. Download and install packages
+
+Download the following `.deb` files from the [latest release](https://github.com/Voyant-Photonics/voyant-ros/releases/latest):
+
+- `voyant-api_*_amd64.deb`
+- `voyant-api-dev_*_amd64.deb`
+- `ros-humble-voyant-ros_*_amd64.deb`
+
+```bash
+cd ~/Downloads  # or wherever you saved the .deb files
+sudo apt update
+sudo apt install -y ./voyant-api*.deb
+sudo apt install -y ./ros-humble-voyant-ros*.deb
+```
+
+#### 3. [Optional] Install visualization tools
+
+- Install Foxglove Studio from the [official website](https://foxglove.dev/download/), or use [Foxglove Web](https://app.foxglove.dev/) at `ws://localhost:8765`
+- Install the ROS2-Foxglove bridge:
+
+  ```bash
+  sudo apt install ros-humble-foxglove-*
+  ```
+
+---
+
+### Option B: Build from source
+
+#### 1. Clone the repository
 
 ```bash
 mkdir -p ~/ros2_ws/src && cd ~/ros2_ws/src
 git clone git@github.com:Voyant-Photonics/voyant-ros.git
 ```
 
-### 2. Install the package dependencies
+#### 2. Install the package dependencies
 
-#### Visualization Tools
+##### Visualization Tools
+
 - For Foxglove visualization, install Foxglove Studio from the [official website](https://foxglove.dev/download/)
 - Alternatively you can also visualize the pointcloud over the Web using the Foxglove Web. Simply open the [Foxglove Web](https://app.foxglove.dev/) and connect to the default Foxglove websocket server at `ws://localhost:8765`
 - Install the ROS2-Foxglove bridge:
+
   ```bash
   sudo apt install ros-humble-foxglove-*
   ```
 
-#### ROS Dependencies
+##### ROS Dependencies
+
 ```bash
 sudo apt install ros-humble-pcl-ros ros-humble-rviz2
 ```
+
 > **Note**
 > You can also install it using the rosdep command
+>
 > ```bash
 > rosdep install --from-paths src --ignore-src -r -y
 > ```
+>
 > The pointcloud can also be visualized using the RViz, set `use_rviz` launch argument `true` to visualize pointcloud in RViz.
 
-#### Docker Instructions
+##### Docker Instructions
+
 This repository also provides a Dockerfile to build a Docker image with the ROS2 Humble distribution and the Voyant ROS package.
 To build the Docker image, run the following command from the repo root:
 
@@ -76,10 +130,18 @@ To run the Docker container, execute the following command:
 docker run -it --network=host voyant_ros2_container
 ```
 
-#### Install Voyant API
-Follow the native installation guide from the official [Voyant SDK Documentation](https://voyant-photonics.github.io/02_getting-started/installation.html).
+##### Install Voyant API
 
-### 3. Build the package
+Download `voyant-api_*_amd64.deb` and `voyant-api-dev_*_amd64.deb` from the [latest voyant-sdk release](https://github.com/Voyant-Photonics/voyant-sdk/releases/latest) and install them:
+
+```bash
+cd ~/Downloads  # or location of downloaded files
+sudo apt update
+sudo apt install -y ./voyant-api_*$(dpkg --print-architecture).deb \
+                    ./voyant-api-dev_*$(dpkg --print-architecture).deb
+```
+
+#### 3. Build the package
 
 ```bash
 source /opt/ros/humble/setup.bash # source ROS2 Humble
@@ -102,14 +164,17 @@ colcon build --symlink-install --packages-select voyant_ros
 > 4. Build and run the ROS node using the steps below.
 
 ### 1. Source the ROS2 workspace
+
 ```bash
 source install/setup.bash
 ```
 
 ### 2. Launch the driver
+
 ```bash
 ros2 launch voyant_ros sensor_launch.py
 ```
+
 or with RViz visualization
 
 ```bash
