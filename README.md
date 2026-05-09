@@ -20,7 +20,10 @@ For other OS/distro combinations, refer to [Option 3: Docker](#option-3-docker) 
 
 ## Pre-requisites
 
-Follow the official [ROS2 documentation](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html) to install ROS2 Humble on your system.
+Install ROS2 for your target platform:
+
+- Ubuntu 22.04: [ROS2 Humble installation guide](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html)
+- Ubuntu 24.04: [ROS2 Jazzy installation guide](https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html)
 
 ## Installation
 
@@ -153,12 +156,12 @@ Build from the repo root:
 docker build --build-arg "VIZ_BRIDGE=true" -t voyant_ros2_container .
 ```
 
-To target a specific ROS distro or RMW implementation:
+To target a specific ROS distro or RMW implementation (`ROS_DISTRO`: `humble` or `jazzy`; `RMW_IMPLEMENTATION`: `rmw_fastrtps_cpp` or `rmw_cyclonedds_cpp`):
 
 ```bash
 docker build --build-arg "VIZ_BRIDGE=true" \
-             --build-arg "ROS_DISTRO=jazzy" \ # humble, jazzy
-             --build-arg "RMW_IMPLEMENTATION=rmw_cyclonedds_cpp" \ # rmw_fastrtps_cpp, rmw_cyclonedds_cpp
+             --build-arg "ROS_DISTRO=jazzy" \
+             --build-arg "RMW_IMPLEMENTATION=rmw_cyclonedds_cpp" \
              -t voyant_ros2_container .
 ```
 
