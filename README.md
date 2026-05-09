@@ -66,7 +66,7 @@ sudo apt install -y ./ros-humble-voyant-ros*.deb
 - Install the ROS2-Foxglove bridge:
 
   ```bash
-  sudo apt install ros-humble-foxglove-*
+  sudo apt install ros-humble-foxglove-bridge
   ```
 
 ---
@@ -102,8 +102,8 @@ Download `voyant-api_*_amd64.deb` and `voyant-api-dev_*_amd64.deb` from the [lat
 ```bash
 cd ~/Downloads  # or location of downloaded files
 sudo apt update
-sudo apt install -y ./voyant-api_*$(dpkg --print-architecture).deb \
-                    ./voyant-api-dev_*$(dpkg --print-architecture).deb
+sudo apt install -y ./voyant-api_*amd64.deb \
+                    ./voyant-api-dev_*amd64.deb
 ```
 
 #### 4. Install ROS dependencies
@@ -112,8 +112,18 @@ sudo apt install -y ./voyant-api_*$(dpkg --print-architecture).deb \
 sudo apt install ros-jazzy-pcl-ros ros-jazzy-rviz2
 ```
 
+#### 5. Clone and build
+
+```bash
+mkdir -p ~/ros2_ws/src && cd ~/ros2_ws/src
+git clone https://github.com/Voyant-Photonics/voyant-ros.git
+cd ~/ros2_ws
+source /opt/ros/jazzy/setup.bash
+colcon build --symlink-install --packages-select voyant_ros
+```
+
 > **Note**
-> You can also install dependencies using rosdep:
+> You can also install ROS dependencies via rosdep instead of step 4 (run from workspace root after cloning):
 >
 > ```bash
 > rosdep install --from-paths src --ignore-src -r -y
@@ -121,23 +131,13 @@ sudo apt install ros-jazzy-pcl-ros ros-jazzy-rviz2
 >
 > The pointcloud can also be visualized using RViz — set the `use_rviz` launch argument to `true`.
 
-#### 5. Clone and build
-
-```bash
-mkdir -p ~/ros2_ws/src && cd ~/ros2_ws/src
-git clone git@github.com:Voyant-Photonics/voyant-ros.git
-cd ~/ros2_ws
-source /opt/ros/jazzy/setup.bash
-colcon build --symlink-install --packages-select voyant_ros
-```
-
 #### 6. [Optional] Install visualization tools
 
 - Install Foxglove Studio from the [official website](https://foxglove.dev/download/), or use [Foxglove Web](https://app.foxglove.dev/) at `ws://localhost:8765`
 - Install the ROS2-Foxglove bridge:
 
   ```bash
-  sudo apt install ros-jazzy-foxglove-*
+  sudo apt install ros-jazzy-foxglove-bridge
   ```
 
 ---
@@ -163,9 +163,7 @@ docker build --build-arg "VIZ_BRIDGE=true" \
 ```
 
 > **Note**
-> The `VIZ_BRIDGE` argument is optional and can be set to `true` to install the Foxglove bridge for visualization.
-The default value is `false`. If the argument is set to `true`, the Foxglove bridge will be installed.
-Follow the instructions from the [Visualization Guide](https://voyant-photonics.github.io/foxglove/) to configure Foxglove for pointcloud visualization in a separate terminal or in a web browser.
+> The `VIZ_BRIDGE` argument is optional and can be set to `true` to install the Foxglove bridge for visualization. The default value is `false`. Follow the instructions from the [Visualization Guide](https://voyant-photonics.github.io/foxglove/) to configure Foxglove for pointcloud visualization in a separate terminal or in a web browser.
 
 Run the container:
 
@@ -190,8 +188,16 @@ docker run -it --network=host voyant_ros2_container
 
 ### 1. Source the ROS2 workspace
 
+**If installed from pre-built packages (Option 1):**
+
 ```bash
-source install/setup.bash
+source /opt/ros/humble/setup.bash
+```
+
+**If built from source (Option 2):**
+
+```bash
+source ~/ros2_ws/install/setup.bash
 ```
 
 ### 2. Launch the driver
