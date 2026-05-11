@@ -7,9 +7,11 @@
 [![License](https://img.shields.io/github/license/Voyant-Photonics/voyant-ros)](LICENSE)
 [![Latest release](https://img.shields.io/github/v/release/Voyant-Photonics/voyant-ros)](https://github.com/Voyant-Photonics/voyant-ros/releases)
 
-This ROS package provides support for Voyant sensors targeting the ROS2 Humble distribution. Configure the sensor (client) address using the `config/sensor_params.yaml` file. This package only supports `ROS2 Humble` and `Ubuntu 22.04` for now, and it is not guaranteed to work with other ROS2 distributions or operating systems. Support for other distributions and operating systems will be added in the future.
-
-For Docker instructions on other ROS2 distributions and RMW implementations, refer to the [Docker Instructions](#docker-instructions) section.
+This ROS package provides support for Voyant sensors.
+Configure the sensor (client) address using the `config/sensor_params.yaml` file.
+Pre-built Debian packages target `ROS2 Humble` and `Ubuntu 22.04`.
+`ROS2 Jazzy` and `Ubuntu 24.04` are supported by building from source.
+For other OS/distro combinations, refer to [Option 3: Docker](#option-3-docker) below.
 
 ## Supported device
 
@@ -18,72 +20,158 @@ For Docker instructions on other ROS2 distributions and RMW implementations, ref
 
 ## Pre-requisites
 
-Follow the official [ROS2 documentation](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html) to install ROS2 Humble on your system.
+Install ROS2 for your target platform:
+
+- Ubuntu 22.04: [ROS2 Humble installation guide](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html)
+- Ubuntu 24.04: [ROS2 Jazzy installation guide](https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html)
 
 ## Installation
 
-### 1. Clone the repository
+### Option 1: Native — Ubuntu 22.04 + ROS2 Humble (pre-built packages)
+
+#### 1. Install ROS2 Humble
+
+Follow the official [ROS2 Humble installation guide](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html).
+
+#### 2. Install Cap'n Proto
+
+Cap'n Proto is a required runtime dependency that must be built from source. Follow the **Installation: Unix** > **From Release Tarball** instructions at [capnproto.org/install.html](https://capnproto.org/install.html). At the time of writing:
+
+```bash
+curl -O https://capnproto.org/capnproto-c++-1.1.0.tar.gz
+tar zxf capnproto-c++-1.1.0.tar.gz
+cd capnproto-c++-1.1.0
+./configure
+make -j6 check
+sudo make install
+sudo ldconfig
+cd ..
+```
+
+#### 3. Download and install packages
+
+Download the following `.deb` files from the [latest voyant-ros release](https://github.com/Voyant-Photonics/voyant-ros/releases/latest) (the `voyant-api` packages are bundled here alongside the ROS package, version-matched):
+
+- `voyant-api_*_amd64.deb`
+- `voyant-api-dev_*_amd64.deb`
+- `ros-humble-voyant-ros_*_amd64.deb`
+
+```bash
+cd ~/Downloads  # or wherever you saved the .deb files
+sudo apt update
+sudo apt install -y ./voyant-api*.deb
+sudo apt install -y ./ros-humble-voyant-ros*.deb
+```
+
+#### 4. [Optional] Install visualization tools
+
+- Install Foxglove Studio from the [official website](https://foxglove.dev/download/), or use [Foxglove Web](https://app.foxglove.dev/) at `ws://localhost:8765`
+- Install the ROS2-Foxglove bridge:
+
+  ```bash
+  sudo apt install ros-humble-foxglove-bridge
+  ```
+
+---
+
+### Option 2: Native — Ubuntu 24.04 + ROS2 Jazzy (build from source)
+
+#### 1. Install ROS2 Jazzy
+
+Follow the official [ROS2 Jazzy installation guide](https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html).
+
+<!-- markdownlint-disable-next-line MD024 -->
+#### 2. Install Cap'n Proto
+
+Cap'n Proto is a required runtime dependency that must be built from source.
+Follow the **Installation: Unix** > **From Release Tarball** instructions at [capnproto.org/install.html](https://capnproto.org/install.html).
+At the time of writing:
+
+```bash
+curl -O https://capnproto.org/capnproto-c++-1.1.0.tar.gz
+tar zxf capnproto-c++-1.1.0.tar.gz
+cd capnproto-c++-1.1.0
+./configure
+make -j6 check
+sudo make install
+sudo ldconfig
+cd ..
+```
+
+#### 3. Install Voyant API
+
+Download `voyant-api_*_amd64.deb` and `voyant-api-dev_*_amd64.deb` from the [latest voyant-sdk release](https://github.com/Voyant-Photonics/voyant-sdk/releases/latest) and install them:
+
+```bash
+cd ~/Downloads  # or location of downloaded files
+sudo apt update
+sudo apt install -y ./voyant-api_*amd64.deb \
+                    ./voyant-api-dev_*amd64.deb
+```
+
+#### 4. Install ROS dependencies
+
+```bash
+sudo apt install ros-jazzy-pcl-ros ros-jazzy-rviz2
+```
+
+#### 5. Clone and build
 
 ```bash
 mkdir -p ~/ros2_ws/src && cd ~/ros2_ws/src
-git clone git@github.com:Voyant-Photonics/voyant-ros.git
+git clone https://github.com/Voyant-Photonics/voyant-ros.git
+cd ~/ros2_ws
+source /opt/ros/jazzy/setup.bash
+colcon build --symlink-install --packages-select voyant_ros
 ```
 
-### 2. Install the package dependencies
-
-#### Visualization Tools
-- For Foxglove visualization, install Foxglove Studio from the [official website](https://foxglove.dev/download/)
-- Alternatively you can also visualize the pointcloud over the Web using the Foxglove Web. Simply open the [Foxglove Web](https://app.foxglove.dev/) and connect to the default Foxglove websocket server at `ws://localhost:8765`
-- Install the ROS2-Foxglove bridge:
-  ```bash
-  sudo apt install ros-humble-foxglove-*
-  ```
-
-#### ROS Dependencies
-```bash
-sudo apt install ros-humble-pcl-ros ros-humble-rviz2
-```
 > **Note**
-> You can also install it using the rosdep command
+> You can also install ROS dependencies via rosdep instead of step 4 (run from workspace root after cloning):
+>
 > ```bash
 > rosdep install --from-paths src --ignore-src -r -y
 > ```
-> The pointcloud can also be visualized using the RViz, set `use_rviz` launch argument `true` to visualize pointcloud in RViz.
+>
+> The pointcloud can also be visualized using RViz — set the `use_rviz` launch argument to `true`.
 
-#### Docker Instructions
-This repository also provides a Dockerfile to build a Docker image with the ROS2 Humble distribution and the Voyant ROS package.
-To build the Docker image, run the following command from the repo root:
+#### 6. [Optional] Install visualization tools
+
+- Install Foxglove Studio from the [official website](https://foxglove.dev/download/), or use [Foxglove Web](https://app.foxglove.dev/) at `ws://localhost:8765`
+- Install the ROS2-Foxglove bridge:
+
+  ```bash
+  sudo apt install ros-jazzy-foxglove-bridge
+  ```
+
+---
+
+### Option 3: Docker
+
+Use this for other OS/distro combinations, custom RMW implementations, or isolated environments.
+The image has been tested with ROS2 Humble and Jazzy, and RMW implementations FastRTPS and CycloneDDS.
+
+Build from the repo root:
 
 ```bash
 docker build --build-arg "VIZ_BRIDGE=true" -t voyant_ros2_container .
 ```
 
-The Docker image has been tested on Ubuntu 22.04 and ROS2 distributions Humble and Jazzy. RMW implementations like FastRTPS and CycloneDDS have been tested with the Docker image.
+To target a specific ROS distro or RMW implementation (`ROS_DISTRO`: `humble` or `jazzy`; `RMW_IMPLEMENTATION`: `rmw_fastrtps_cpp` or `rmw_cyclonedds_cpp`):
 
 ```bash
 docker build --build-arg "VIZ_BRIDGE=true" \
-             --build-arg "ROS_DISTRO=jazzy" \ # humble, jazzy
-             --build-arg "RMW_IMPLEMENTATION=rmw_cyclonedds_cpp" \ # rmw_fastrtps_cpp, rmw_cyclonedds_cpp
+             --build-arg "ROS_DISTRO=jazzy" \
+             --build-arg "RMW_IMPLEMENTATION=rmw_cyclonedds_cpp" \
              -t voyant_ros2_container .
 ```
 
 > **Note**
-> The `VIZ_BRIDGE` argument is optional and can be set to `true` to install the Foxglove bridge for visualization. The default value is `false`. If the argument is set to `true`, the Foxglove bridge will be installed. Follow the instructions from the [Visualization Guide](https://voyant-photonics.github.io/foxglove/) to configure Foxglove for pointcloud visualization in separate terminal or in a web browser.
+> The `VIZ_BRIDGE` argument is optional and can be set to `true` to install the Foxglove bridge for visualization. The default value is `false`. Follow the instructions from the [Visualization Guide](https://voyant-photonics.github.io/foxglove/) to configure Foxglove for pointcloud visualization in a separate terminal or in a web browser.
 
-To run the Docker container, execute the following command:
+Run the container:
 
 ```bash
 docker run -it --network=host voyant_ros2_container
-```
-
-#### Install Voyant API
-Follow the native installation guide from the official [Voyant SDK Documentation](https://voyant-photonics.github.io/02_getting-started/installation.html).
-
-### 3. Build the package
-
-```bash
-source /opt/ros/humble/setup.bash # source ROS2 Humble
-colcon build --symlink-install --packages-select voyant_ros
 ```
 
 ## Running the package
@@ -102,14 +190,25 @@ colcon build --symlink-install --packages-select voyant_ros
 > 4. Build and run the ROS node using the steps below.
 
 ### 1. Source the ROS2 workspace
+
+**If installed from pre-built packages (Option 1):**
+
 ```bash
-source install/setup.bash
+source /opt/ros/humble/setup.bash
+```
+
+**If built from source (Option 2):**
+
+```bash
+source ~/ros2_ws/install/setup.bash
 ```
 
 ### 2. Launch the driver
+
 ```bash
 ros2 launch voyant_ros sensor_launch.py
 ```
+
 or with RViz visualization
 
 ```bash
@@ -168,13 +267,15 @@ Edit the `yaml` config file to pass the correct file paths.
 
 ## Configuring Foxglove for Pointcloud Visualization
 
-The launch command will start the driver and publish pointcloud data on the `/point_cloud` topic. It will also open the Foxglove GUI for visualization.
+The launch command will start the driver and publish pointcloud data on the `/point_cloud` topic.
+It will also open the Foxglove GUI for visualization.
 
 1. Click on `Open connection...` in the Foxglove GUI on the left panel.
 2. Connect Foxglove to the default Foxglove websocket server at `ws://localhost:8765`
 3. In the top right corner of the Foxglove GUI title bar, click on the `Layout` button and import the configuration file from `config/voyant_ros_foxglove_cfg.json`
 
-This will load a layout with pointcloud data visualization, offering three different color maps. For more information on the colormap options, refer to the [Foxglove Colormap Documentation](https://voyant-photonics.github.io/foxglove/).
+This will load a layout with pointcloud data visualization, offering three different color maps.
+For more information on the colormap options, refer to the [Foxglove Colormap Documentation](https://voyant-photonics.github.io/foxglove/).
 
 ## Managing the Foxglove Layout Config
 
