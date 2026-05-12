@@ -1,4 +1,4 @@
-# Official ROS drivers for Voyant Lidars
+# Official ROS2 drivers for Voyant Lidars
 
 [![CI](https://github.com/Voyant-Photonics/voyant-ros/actions/workflows/docker-image.yml/badge.svg?branch=main)](https://github.com/Voyant-Photonics/voyant-ros/actions/workflows/docker-image.yml)
 ![ROS 2](https://img.shields.io/badge/ROS%202-Humble%20%7C%20Jazzy-blue)
@@ -7,7 +7,7 @@
 [![License](https://img.shields.io/github/license/Voyant-Photonics/voyant-ros)](LICENSE)
 [![Latest release](https://img.shields.io/github/v/release/Voyant-Photonics/voyant-ros)](https://github.com/Voyant-Photonics/voyant-ros/releases)
 
-This ROS package provides support for Voyant sensors.
+This ROS2 package provides support for Voyant sensors.
 Configure the sensor (client) address using the `config/sensor_params.yaml` file.
 Pre-built Debian packages target `ROS2 Humble` and `Ubuntu 22.04`.
 `ROS2 Jazzy` and `Ubuntu 24.04` are supported by building from source.
@@ -50,7 +50,7 @@ cd ..
 
 #### 3. Download and install packages
 
-Download the following `.deb` files from the [latest voyant-ros release](https://github.com/Voyant-Photonics/voyant-ros/releases/latest) (the `voyant-api` packages are bundled here alongside the ROS package, version-matched):
+Download the following `.deb` files from the [latest voyant-ros release](https://github.com/Voyant-Photonics/voyant-ros/releases/latest) (the `voyant-api` packages are bundled here alongside the ROS2 package, version-matched):
 
 - `voyant-api_*_amd64.deb`
 - `voyant-api-dev_*_amd64.deb`
