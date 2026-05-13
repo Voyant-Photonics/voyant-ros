@@ -1,4 +1,4 @@
-# Official ROS2 drivers for Voyant Lidars
+# Official ROS2 drivers for Voyant LiDARs
 
 [![CI](https://github.com/Voyant-Photonics/voyant-ros/actions/workflows/docker-image.yml/badge.svg?branch=main)](https://github.com/Voyant-Photonics/voyant-ros/actions/workflows/docker-image.yml)
 ![ROS 2](https://img.shields.io/badge/ROS%202-Humble%20%7C%20Jazzy-blue)
