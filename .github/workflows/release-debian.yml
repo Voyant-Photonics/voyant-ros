@@ -20,10 +20,6 @@ name: Build & Release Debian
 on:
   workflow_dispatch:
     inputs:
-      sdk_version:
-        description: 'voyant-sdk release to build against ("latest" or e.g. "v0.9.3")'
-        type: string
-        default: 'latest'
       dry_run:
         description: 'Dry run (build + test only). Uncheck to publish a release.'
         type: boolean
@@ -55,50 +51,54 @@ jobs:
       sdk_version: ${{ steps.cfg.outputs.sdk_version }}
       sdk_tarball_url: ${{ steps.cfg.outputs.sdk_tarball_url }}
       publish: ${{ steps.cfg.outputs.publish }}
+      release_tag: ${{ steps.cfg.outputs.release_tag }}
     steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+
       - name: Resolve & validate build configuration
         id: cfg
         run: |
           set -euo pipefail
 
-          # Which SDK release do we build against?
+          # package.xml <version> is the single source of truth: it sets the
+          # .deb version, the release tag, AND the voyant-sdk version we build
+          # against. Versions are lockstep: voyant-ros vX.Y.Z is always built
+          # against voyant-sdk vX.Y.Z.
+          PKG_VERSION="$(grep -oPm1 '(?<=<version>)[^<]+' package.xml)"
+          RELEASE_TAG="v${PKG_VERSION}"
+          echo "package.xml version: ${PKG_VERSION} -> ${RELEASE_TAG}"
+
+          # Do we publish?
           if [ "${{ github.ref_type }}" = "tag" ]; then
-            # Tag push: build against the matching voyant-sdk release; publish.
-            SDKV="${{ github.ref_name }}"
+            # Tag push: the tag must match package.xml, then publish.
+            if [ "${{ github.ref_name }}" != "$RELEASE_TAG" ]; then
+              echo "::error::pushed tag '${{ github.ref_name }}' does not match package.xml version ('$RELEASE_TAG'). Bump package.xml to match the tag." >&2
+              exit 1
+            fi
             PUBLISH=true
           elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            SDKV="${{ inputs.sdk_version }}"
             if [ "${{ inputs.dry_run }}" = "false" ]; then PUBLISH=true; else PUBLISH=false; fi
           else
-            # Branch push / PR (e.g. the temporary test trigger): dry-run vs latest.
-            SDKV="latest"
+            # Branch push (e.g. the temporary test trigger): dry-run only.
             PUBLISH=false
           fi
 
-          # Build the releases API URL ("latest" or a specific tag).
-          if [ "$SDKV" = "latest" ]; then
-            API_URL="https://api.github.com/repos/${SDK_REPO}/releases/latest"
-          else
-            case "$SDKV" in v*) ;; *) SDKV="v$SDKV" ;; esac
-            API_URL="https://api.github.com/repos/${SDK_REPO}/releases/tags/${SDKV}"
-          fi
+          # Always build against the matching voyant-sdk release; fail fast if it
+          # doesn't exist (-f -> non-zero on 404).
+          API_URL="https://api.github.com/repos/${SDK_REPO}/releases/tags/${RELEASE_TAG}"
           echo "Querying $API_URL"
-
-          # Fail fast if the SDK release doesn't exist (-f -> non-zero on 404).
           if ! RESP="$(curl -fsSL "$API_URL")"; then
-            echo "::error::voyant-sdk release '${SDKV}' not found at ${API_URL}" >&2
+            echo "::error::voyant-sdk release '${RELEASE_TAG}' not found at ${API_URL}" >&2
             exit 1
           fi
 
-          # Resolve the concrete tag (e.g. latest -> v0.11.0) and the debian asset.
-          RESOLVED_TAG="$(echo "$RESP" | python3 -c \
-            "import sys,json; print(json.load(sys.stdin).get('tag_name',''))")"
           TARBALL_URL="$(echo "$RESP" | python3 -c \
             "import sys,json; d=json.load(sys.stdin); \
              print(next((a['browser_download_url'] for a in d.get('assets',[]) \
                          if 'debian' in a['name'] and a['name'].endswith('.tar.gz')), ''))")"
           if [ -z "$TARBALL_URL" ]; then
-            echo "::error::voyant-sdk release '${RESOLVED_TAG:-$SDKV}' has no debian .tar.gz asset" >&2
+            echo "::error::voyant-sdk release '${RELEASE_TAG}' has no debian .tar.gz asset" >&2
             exit 1
           fi
 
@@ -111,17 +111,19 @@ jobs:
           API_DEB="$(find /tmp/voyant-api-extract -name "voyant-api_*${ARCH}.deb" | head -n 1)"
           DEV_DEB="$(find /tmp/voyant-api-extract -name "voyant-api-dev_*${ARCH}.deb" | head -n 1)"
           if [ -z "$API_DEB" ] || [ -z "$DEV_DEB" ]; then
-            echo "::error::voyant-sdk release '${RESOLVED_TAG:-$SDKV}' is missing voyant-api / voyant-api-dev .deb for ${ARCH}" >&2
+            echo "::error::voyant-sdk release '${RELEASE_TAG}' is missing voyant-api / voyant-api-dev .deb for ${ARCH}" >&2
             find /tmp/voyant-api-extract -type f -name '*.deb' >&2 || true
             exit 1
           fi
           echo "Found debs: $(basename "$API_DEB"), $(basename "$DEV_DEB")"
 
-          echo "sdk_version=${RESOLVED_TAG:-$SDKV}" >> "$GITHUB_OUTPUT"
+          echo "sdk_version=${RELEASE_TAG}" >> "$GITHUB_OUTPUT"
           echo "sdk_tarball_url=${TARBALL_URL}" >> "$GITHUB_OUTPUT"
           echo "publish=${PUBLISH}" >> "$GITHUB_OUTPUT"
+          echo "release_tag=${RELEASE_TAG}" >> "$GITHUB_OUTPUT"
 
-          echo "SDK version : ${RESOLVED_TAG:-$SDKV}"
+          echo "Release tag : ${RELEASE_TAG}"
+          echo "SDK version : ${RELEASE_TAG}"
           echo "SDK tarball : ${TARBALL_URL}"
           echo "Publish     : ${PUBLISH}"
 
@@ -358,25 +360,15 @@ jobs:
       - name: List artifacts
         run: ls -la release-artifacts/
 
-      - name: Determine release tag
-        id: tag
-        run: |
-          if [ "${{ github.ref_type }}" = "tag" ]; then
-            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
-          else
-            VERSION="$(grep -oPm1 '(?<=<version>)[^<]+' package.xml)"
-            echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ steps.tag.outputs.tag }}
-          name: ${{ steps.tag.outputs.tag }}
+          tag_name: ${{ needs.config.outputs.release_tag }}
+          name: ${{ needs.config.outputs.release_tag }}
           files: release-artifacts/*.deb
           generate_release_notes: true
           draft: false
-          prerelease: ${{ contains(steps.tag.outputs.tag, '-rc') || contains(steps.tag.outputs.tag, '-beta') || contains(steps.tag.outputs.tag, '-alpha') }}
+          prerelease: ${{ contains(needs.config.outputs.release_tag, '-rc') || contains(needs.config.outputs.release_tag, '-beta') || contains(needs.config.outputs.release_tag, '-alpha') }}
           body: |
             Automated debian release of `voyant_ros`, built against
             **voyant-sdk `${{ needs.config.outputs.sdk_version }}`** (amd64).
