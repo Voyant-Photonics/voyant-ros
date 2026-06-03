@@ -1,21 +1,22 @@
 name: Build & Release Debian
 
-# Builds the ros-<distro>-voyant-ros debian against a voyant-sdk release,
-# smoke-tests installation in a clean container, and (optionally) publishes a
-# GitHub release. Intentionally NOT run on every push/PR -- see docker-image.yml
-# for the per-PR source build.
+# Builds the ros-<distro>-voyant-ros debian against the matching voyant-sdk
+# release, smoke-tests installation in a clean container, and (optionally)
+# publishes a GitHub release. Intentionally NOT run on every push/PR -- see
+# docker-image.yml for the per-PR source build.
+#
+# package.xml <version> is the single source of truth: it sets the .deb version,
+# the release tag, and the voyant-sdk version built against (lockstep --
+# voyant-ros vX.Y.Z is always built against voyant-sdk vX.Y.Z). If that voyant-sdk
+# release doesn't exist, the run fails immediately.
 #
 # Two ways in:
 #   * Tag push (git tag vX.Y.Z && git push --tags):
-#       - real release, built against voyant-sdk vX.Y.Z (lockstep versions).
-#       - if voyant-sdk has no vX.Y.Z release, the run fails immediately.
+#       - real release. The tag must equal v<package.xml version> or the run
+#         fails fast.
 #   * Manual (Actions -> "Build & Release Debian" -> Run workflow):
-#       - sdk_version: voyant-sdk release to build against ("latest" or "vX.Y.Z")
-#       - dry_run:     true  -> build + test only (default)
-#                      false -> also publish a release tagged v<package.xml version>
-#
-# While catching up on releases, dispatch with an older sdk_version (dry_run as
-# desired). Going forward, just push a matching vX.Y.Z tag.
+#       - dry_run: true  -> build + test only (default)
+#                  false -> also publish a release tagged v<package.xml version>
 
 on:
   workflow_dispatch:
@@ -53,6 +54,8 @@ jobs:
 
       - name: Resolve & validate build configuration
         id: cfg
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
 
@@ -80,10 +83,12 @@ jobs:
           fi
 
           # Always build against the matching voyant-sdk release; fail fast if it
-          # doesn't exist (-f -> non-zero on 404).
+          # doesn't exist (-f -> non-zero on 404). Authenticate with the
+          # Actions-provided token to avoid the 60/hr unauthenticated rate limit
+          # (voyant-sdk is public, so this just raises the limit).
           API_URL="https://api.github.com/repos/${SDK_REPO}/releases/tags/${RELEASE_TAG}"
           echo "Querying $API_URL"
-          if ! RESP="$(curl -fsSL "$API_URL")"; then
+          if ! RESP="$(curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" "$API_URL")"; then
             echo "::error::voyant-sdk release '${RELEASE_TAG}' not found at ${API_URL}" >&2
             exit 1
           fi

@@ -305,9 +305,9 @@ pre-commit run --all-files
 
 Releases are built and published by the [`Build & Release Debian`](.github/workflows/release-debian.yml)
 GitHub Action. It builds the `ros-humble-voyant-ros` (jammy) and `ros-jazzy-voyant-ros`
-(noble) Debian packages against a chosen [`voyant-sdk`](https://github.com/Voyant-Photonics/voyant-sdk/releases)
-release, smoke-tests installation in a clean container, and attaches all packages
-to a GitHub Release. This is separate from the per-PR build in
+(noble) Debian packages against the matching [`voyant-sdk`](https://github.com/Voyant-Photonics/voyant-sdk/releases)
+release (`v<package.xml version>`), smoke-tests installation in a clean container,
+and attaches all packages to a GitHub Release. This is separate from the per-PR build in
 [`docker-image.yml`](.github/workflows/docker-image.yml) and does **not** run on
 every push.
 
