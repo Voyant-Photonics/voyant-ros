@@ -336,12 +336,24 @@ jobs:
       - name: Checkout the repository
         uses: actions/checkout@v4
 
-      - name: Download all debian artifacts
+      - name: Download all built debian artifacts
         uses: actions/download-artifact@v4
         with:
           pattern: deb-*
           path: release-artifacts/
           merge-multiple: true
+
+      - name: Bundle voyant-api debs from the SDK release
+        run: |
+          set -euo pipefail
+          ARCH="$(dpkg --print-architecture)"
+          wget -q -O /tmp/voyant-api.tar.gz "${{ needs.config.outputs.sdk_tarball_url }}"
+          mkdir -p /tmp/voyant-api-extract
+          tar -xzf /tmp/voyant-api.tar.gz -C /tmp/voyant-api-extract
+          find /tmp/voyant-api-extract -name "voyant-api_*${ARCH}.deb" \
+            -exec cp {} release-artifacts/ \;
+          find /tmp/voyant-api-extract -name "voyant-api-dev_*${ARCH}.deb" \
+            -exec cp {} release-artifacts/ \;
 
       - name: List artifacts
         run: ls -la release-artifacts/
@@ -366,8 +378,10 @@ jobs:
           draft: false
           prerelease: ${{ contains(steps.tag.outputs.tag, '-rc') || contains(steps.tag.outputs.tag, '-beta') || contains(steps.tag.outputs.tag, '-alpha') }}
           body: |
-            Automated debian release of `voyant_ros`.
+            Automated debian release of `voyant_ros`, built against
+            **voyant-sdk `${{ needs.config.outputs.sdk_version }}`** (amd64).
 
-            Built against **voyant-sdk `${{ needs.config.outputs.sdk_version }}`**.
-
-            Targets: `ros-humble-voyant-ros` (jammy) and `ros-jazzy-voyant-ros` (noble), amd64.
+            Assets:
+            - `ros-humble-voyant-ros_*.deb` (jammy)
+            - `ros-jazzy-voyant-ros_*.deb` (noble)
+            - `voyant-api_*.deb` and `voyant-api-dev_*.deb` (from voyant-sdk `${{ needs.config.outputs.sdk_version }}`)
