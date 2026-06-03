@@ -31,6 +31,11 @@ on:
   push:
     tags:
       - 'v*'
+    # TEMP (remove before merging): lets the workflow run on any branch push so
+    # it shows up in the Actions tab without merging to main. Branch pushes are
+    # treated as dry-runs (publish=false) by the config job below.
+    branches:
+      - '**'
 
 # Asset naming in voyant-sdk releases: voyant-api-debian-<tag>.tar.gz
 env:
@@ -51,13 +56,17 @@ jobs:
           set -euo pipefail
 
           # Which SDK release do we build against?
-          if [ "${{ github.event_name }}" = "push" ]; then
+          if [ "${{ github.ref_type }}" = "tag" ]; then
             # Tag push: build against the matching voyant-sdk release; publish.
             SDKV="${{ github.ref_name }}"
             PUBLISH=true
-          else
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             SDKV="${{ inputs.sdk_version }}"
             if [ "${{ inputs.dry_run }}" = "false" ]; then PUBLISH=true; else PUBLISH=false; fi
+          else
+            # Branch push / PR (e.g. the temporary test trigger): dry-run vs latest.
+            SDKV="latest"
+            PUBLISH=false
           fi
 
           # Build the releases API URL ("latest" or a specific tag).
@@ -317,7 +326,7 @@ jobs:
       - name: Determine release tag
         id: tag
         run: |
-          if [ "${{ github.event_name }}" = "push" ]; then
+          if [ "${{ github.ref_type }}" = "tag" ]; then
             echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
           else
             VERSION="$(grep -oPm1 '(?<=<version>)[^<]+' package.xml)"
