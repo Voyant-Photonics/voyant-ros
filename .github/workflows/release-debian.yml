@@ -27,11 +27,6 @@ on:
   push:
     tags:
       - 'v*'
-    # TEMP (remove before merging): lets the workflow run on any branch push so
-    # it shows up in the Actions tab without merging to main. Branch pushes are
-    # treated as dry-runs (publish=false) by the config job below.
-    branches:
-      - '**'
 
 # Asset naming in voyant-sdk releases: voyant-api-debian-<tag>.tar.gz
 env:
@@ -329,9 +324,18 @@ jobs:
           # Is the node still alive after the measurement window?
           ALIVE=yes; kill -0 "$NODE_PID" 2>/dev/null || ALIVE=no
 
-          # Stop everything.
-          kill "$NODE_PID" "$SIM_PID" 2>/dev/null || true
-          wait "$NODE_PID" 2>/dev/null || true
+          # Graceful shutdown (SIGINT, like Ctrl+C) so the node and simulator
+          # print their closeout statistics. Then wait for BOTH to exit so those
+          # stats are flushed to the logs before we read them.
+          kill -INT "$NODE_PID" "$SIM_PID" 2>/dev/null || true
+          deadline=$((SECONDS + 10))
+          while kill -0 "$NODE_PID" 2>/dev/null || kill -0 "$SIM_PID" 2>/dev/null; do
+            [ "$SECONDS" -ge "$deadline" ] && break
+            sleep 0.3
+          done
+          # Force-kill anything that ignored SIGINT, then reap.
+          kill -KILL "$NODE_PID" "$SIM_PID" 2>/dev/null || true
+          wait "$NODE_PID" "$SIM_PID" 2>/dev/null || true
 
           echo "=== node.log ==="; cat "$LOGDIR/node.log" || true
           echo "=== sim.log ===";  cat "$LOGDIR/sim.log"  || true
