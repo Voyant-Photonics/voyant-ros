@@ -202,7 +202,8 @@ jobs:
 
       - name: Generate debian & build package
         run: |
-          set -euo pipefail
+          # No -u: ROS setup.sh references unbound vars (AMENT_TRACE_SETUP_FILES).
+          set -eo pipefail
           . "/opt/ros/${{ matrix.ros_distro }}/setup.sh"
           bloom-generate rosdebian \
             --os-name ubuntu \
@@ -289,7 +290,8 @@ jobs:
 
       - name: Smoke test against the Carbon simulator
         run: |
-          set -uo pipefail
+          # No -u: ROS setup.bash references unbound vars (AMENT_TRACE_SETUP_FILES).
+          set -o pipefail
           . "/opt/ros/${{ matrix.ros_distro }}/setup.bash"
           CFG="/opt/ros/${{ matrix.ros_distro }}/share/voyant_ros/config/sensor_params.yaml"
           if [ -f "$CFG" ]; then
