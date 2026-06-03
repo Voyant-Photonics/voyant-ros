@@ -300,3 +300,60 @@ And clean up the formatting:
 ```bash
 pre-commit run --all-files
 ```
+
+## Releasing (maintainers)
+
+Releases are built and published by the [`Build & Release Debian`](.github/workflows/release-debian.yml)
+GitHub Action. It builds the `ros-humble-voyant-ros` (jammy) and `ros-jazzy-voyant-ros`
+(noble) Debian packages against a chosen [`voyant-sdk`](https://github.com/Voyant-Photonics/voyant-sdk/releases)
+release, smoke-tests installation in a clean container, and attaches all packages
+to a GitHub Release. This is separate from the per-PR build in
+[`docker-image.yml`](.github/workflows/docker-image.yml) and does **not** run on
+every push.
+
+A published release bundles four version-matched `amd64` Debian packages: the
+two ROS packages plus `voyant-api_*.deb` and `voyant-api-dev_*.deb` pulled from the
+selected `voyant-sdk` release.
+
+### Cut a release (the normal path)
+
+The `<version>` in [`package.xml`](package.xml) is the single source of truth: it
+sets the `.deb` version, the release tag, and the `voyant-sdk` version built
+against (versions are lockstep — `voyant-ros vX.Y.Z` is built against
+`voyant-sdk vX.Y.Z`).
+
+1. Branch and bump `<version>` in [`package.xml`](package.xml) (e.g. to `0.9.3`).
+2. Dry run to validate: **Actions → Build & Release Debian → Run workflow** on
+   your branch with `dry_run` checked. This builds + smoke-tests against
+   `voyant-sdk v0.9.3` (the package.xml version) without publishing.
+3. Merge to `main`.
+4. Tag the matching version and push:
+
+   ```bash
+   git tag v0.9.3
+   git push origin v0.9.3
+   ```
+
+The tag push runs the workflow again and publishes. The tag **must** equal
+`v<package.xml version>` — if it doesn't, the `config` job fails fast (bump
+`package.xml` to match). If `voyant-sdk v0.9.3` doesn't exist, it likewise fails
+fast. Once `build` and `test-install` pass, the release is published on the tag
+with auto-generated notes from the commit/PR history.
+
+### Dry run
+
+The workflow always builds against `v<package.xml version>`. To validate without
+publishing, use **Run workflow** with `dry_run` checked (build + test only).
+Unchecking `dry_run` publishes a release tagged `v<package.xml version>` without
+needing a git tag.
+
+> **Note**
+> The manual **Run workflow** button only appears once the workflow file is on
+> the default branch (`main`). From another branch you can still dispatch it via
+> the CLI:
+>
+> ```bash
+> gh workflow run release-debian.yml --ref <branch> -f dry_run=true
+> ```
+
+The manual build steps this automates are documented in [`docs/debian.md`](docs/debian.md).
