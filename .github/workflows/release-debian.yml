@@ -295,38 +295,88 @@ jobs:
           # No -u: ROS setup.bash references unbound vars (AMENT_TRACE_SETUP_FILES).
           set -o pipefail
           . "/opt/ros/${{ matrix.ros_distro }}/setup.bash"
+          LOGDIR=/tmp/smoke-logs
+          mkdir -p "$LOGDIR"
           CFG="/opt/ros/${{ matrix.ros_distro }}/share/voyant_ros/config/sensor_params.yaml"
           if [ -f "$CFG" ]; then
             sed -i "s|interface_address:.*|interface_address: '127.0.0.1'|" "$CFG"
           fi
 
-          # Start the simulator in the background.
+          # Start the simulator (background).
           voyant_carbon_simulator --bind-addr 127.0.0.1:0 --group-addr 224.0.0.0:5678 \
-            > /tmp/sim.log 2>&1 &
+            > "$LOGDIR/sim.log" 2>&1 &
           SIM_PID=$!
           sleep 3
 
-          # Run the node for a bounded window; timeout -> 124 is success.
-          set +e
-          timeout 20s ros2 run voyant_ros voyant_sensor_node --ros-args \
-            ${CFG:+--params-file "$CFG"} > /tmp/node.log 2>&1
-          RC=$?
-          set -e
-          kill "$SIM_PID" 2>/dev/null || true
+          # Start the driver node (background) and let it connect.
+          ros2 run voyant_ros voyant_sensor_node --ros-args \
+            ${CFG:+--params-file "$CFG"} > "$LOGDIR/node.log" 2>&1 &
+          NODE_PID=$!
+          sleep 5
 
-          echo "=== node.log ==="; cat /tmp/node.log || true
-          echo "=== sim.log ===";  cat /tmp/sim.log  || true
+          # Find the pointcloud topic (driver publishes /point_cloud).
+          ros2 topic list > "$LOGDIR/topics.log" 2>&1 || true
+          PC_TOPIC="$(grep -m1 -E 'point_cloud' "$LOGDIR/topics.log" || true)"
+          PC_TOPIC="${PC_TOPIC:-/point_cloud}"
+          echo "Measuring pointcloud topic: $PC_TOPIC"
 
-          if grep -qiE "invalid opcode|segmentation fault|terminate called|core dumped" /tmp/node.log; then
+          # Measure frame rate / message count over a window, and grab one
+          # frame's dimensions (points = width * height).
+          timeout 15s ros2 topic hz "$PC_TOPIC"               > "$LOGDIR/hz.log"     2>&1 || true
+          timeout 10s ros2 topic echo --once --field width  "$PC_TOPIC" > "$LOGDIR/width.log"  2>&1 || true
+          timeout 10s ros2 topic echo --once --field height "$PC_TOPIC" > "$LOGDIR/height.log" 2>&1 || true
+
+          # Is the node still alive after the measurement window?
+          ALIVE=yes; kill -0 "$NODE_PID" 2>/dev/null || ALIVE=no
+
+          # Stop everything.
+          kill "$NODE_PID" "$SIM_PID" 2>/dev/null || true
+          wait "$NODE_PID" 2>/dev/null || true
+
+          echo "=== node.log ==="; cat "$LOGDIR/node.log" || true
+          echo "=== sim.log ===";  cat "$LOGDIR/sim.log"  || true
+          echo "=== hz.log ===";   cat "$LOGDIR/hz.log"   || true
+
+          # Parse measurements (|| true so empty results don't trip set -e).
+          RATE="$(grep -oE 'average rate: [0-9.]+' "$LOGDIR/hz.log" | head -n1 | awk '{print $3}' || true)"
+          FRAMES="$(grep -oE 'window: [0-9]+' "$LOGDIR/hz.log" | tail -n1 | awk '{print $2}' || true)"
+          WIDTH="$(grep -oE '[0-9]+' "$LOGDIR/width.log" | head -n1 || true)"
+          HEIGHT="$(grep -oE '[0-9]+' "$LOGDIR/height.log" | head -n1 || true)"
+          POINTS="n/a"
+          if [ -n "$WIDTH" ] && [ -n "$HEIGHT" ]; then POINTS=$((WIDTH * HEIGHT)); fi
+
+          # Report to the job summary.
+          {
+            echo "### Smoke test — ${{ matrix.ros_distro }} (SDK ${{ needs.config.outputs.sdk_version }})"
+            echo ""
+            echo "| Metric | Value |"
+            echo "| --- | --- |"
+            echo "| Pointcloud topic | \`${PC_TOPIC}\` |"
+            echo "| Node alive at teardown | ${ALIVE} |"
+            echo "| Avg frame rate | ${RATE:-n/a} Hz |"
+            echo "| Frames in window | ${FRAMES:-0} |"
+            echo "| Points per frame | ${POINTS} (w=${WIDTH:-?} h=${HEIGHT:-?}) |"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+          # Fail on fatal errors or if no frames were ever assembled.
+          if grep -qiE "invalid opcode|segmentation fault|terminate called|core dumped" "$LOGDIR/node.log"; then
             echo "::error::node reported a fatal error" >&2
             exit 1
           fi
-          # 124 = timed out (still running = healthy); 0 = clean exit. Anything else fails.
-          if [ "$RC" -ne 124 ] && [ "$RC" -ne 0 ]; then
-            echo "::error::voyant_sensor_node exited with code $RC" >&2
+          if [ -z "$FRAMES" ] || [ "$FRAMES" -lt 1 ]; then
+            echo "::error::no pointcloud frames received on ${PC_TOPIC}" >&2
             exit 1
           fi
-          echo "Smoke test passed (rc=$RC)."
+          echo "Smoke test passed: ${FRAMES} frames @ ${RATE:-?} Hz, ${POINTS} points/frame."
+
+      - name: Upload smoke-test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-logs-${{ matrix.ros_distro }}
+          path: /tmp/smoke-logs/
+          retention-days: 30
+          if-no-files-found: warn
 
   release:
     needs: [config, build, test-install]
