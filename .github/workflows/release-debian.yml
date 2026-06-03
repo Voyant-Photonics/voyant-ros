@@ -1,0 +1,341 @@
+name: Build & Release Debian
+
+# Builds the ros-<distro>-voyant-ros debian against a voyant-sdk release,
+# smoke-tests installation in a clean container, and (optionally) publishes a
+# GitHub release. Intentionally NOT run on every push/PR -- see docker-image.yml
+# for the per-PR source build.
+#
+# Two ways in:
+#   * Tag push (git tag vX.Y.Z && git push --tags):
+#       - real release, built against voyant-sdk vX.Y.Z (lockstep versions).
+#       - if voyant-sdk has no vX.Y.Z release, the run fails immediately.
+#   * Manual (Actions -> "Build & Release Debian" -> Run workflow):
+#       - sdk_version: voyant-sdk release to build against ("latest" or "vX.Y.Z")
+#       - dry_run:     true  -> build + test only (default)
+#                      false -> also publish a release tagged v<package.xml version>
+#
+# While catching up on releases, dispatch with an older sdk_version (dry_run as
+# desired). Going forward, just push a matching vX.Y.Z tag.
+
+on:
+  workflow_dispatch:
+    inputs:
+      sdk_version:
+        description: 'voyant-sdk release to build against ("latest" or e.g. "v0.9.3")'
+        type: string
+        default: 'latest'
+      dry_run:
+        description: 'Dry run (build + test only). Uncheck to publish a release.'
+        type: boolean
+        default: true
+  push:
+    tags:
+      - 'v*'
+
+# Asset naming in voyant-sdk releases: voyant-api-debian-<tag>.tar.gz
+env:
+  SDK_REPO: Voyant-Photonics/voyant-sdk
+  CAPNP_VERSION: '1.1.0'
+
+jobs:
+  config:
+    runs-on: ubuntu-latest
+    outputs:
+      sdk_version: ${{ steps.cfg.outputs.sdk_version }}
+      sdk_tarball_url: ${{ steps.cfg.outputs.sdk_tarball_url }}
+      publish: ${{ steps.cfg.outputs.publish }}
+    steps:
+      - name: Resolve & validate build configuration
+        id: cfg
+        run: |
+          set -euo pipefail
+
+          # Which SDK release do we build against?
+          if [ "${{ github.event_name }}" = "push" ]; then
+            # Tag push: build against the matching voyant-sdk release; publish.
+            SDKV="${{ github.ref_name }}"
+            PUBLISH=true
+          else
+            SDKV="${{ inputs.sdk_version }}"
+            if [ "${{ inputs.dry_run }}" = "false" ]; then PUBLISH=true; else PUBLISH=false; fi
+          fi
+
+          # Build the releases API URL ("latest" or a specific tag).
+          if [ "$SDKV" = "latest" ]; then
+            API_URL="https://api.github.com/repos/${SDK_REPO}/releases/latest"
+          else
+            case "$SDKV" in v*) ;; *) SDKV="v$SDKV" ;; esac
+            API_URL="https://api.github.com/repos/${SDK_REPO}/releases/tags/${SDKV}"
+          fi
+          echo "Querying $API_URL"
+
+          # Fail fast if the SDK release doesn't exist (-f -> non-zero on 404).
+          if ! RESP="$(curl -fsSL "$API_URL")"; then
+            echo "::error::voyant-sdk release '${SDKV}' not found at ${API_URL}" >&2
+            exit 1
+          fi
+
+          # Resolve the concrete tag (e.g. latest -> v0.11.0) and the debian asset.
+          RESOLVED_TAG="$(echo "$RESP" | python3 -c \
+            "import sys,json; print(json.load(sys.stdin).get('tag_name',''))")"
+          TARBALL_URL="$(echo "$RESP" | python3 -c \
+            "import sys,json; d=json.load(sys.stdin); \
+             print(next((a['browser_download_url'] for a in d.get('assets',[]) \
+                         if 'debian' in a['name'] and a['name'].endswith('.tar.gz')), ''))")"
+          if [ -z "$TARBALL_URL" ]; then
+            echo "::error::voyant-sdk release '${RESOLVED_TAG:-$SDKV}' has no debian .tar.gz asset" >&2
+            exit 1
+          fi
+
+          echo "sdk_version=${RESOLVED_TAG:-$SDKV}" >> "$GITHUB_OUTPUT"
+          echo "sdk_tarball_url=${TARBALL_URL}" >> "$GITHUB_OUTPUT"
+          echo "publish=${PUBLISH}" >> "$GITHUB_OUTPUT"
+
+          echo "SDK version : ${RESOLVED_TAG:-$SDKV}"
+          echo "SDK tarball : ${TARBALL_URL}"
+          echo "Publish     : ${PUBLISH}"
+
+  build:
+    needs: config
+    runs-on: ubuntu-latest
+    container: ros:${{ matrix.ros_distro }}-ros-base
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - ros_distro: humble
+            os_version: jammy
+          - ros_distro: jazzy
+            os_version: noble
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            build-essential debhelper python3-bloom python3-rosdep \
+            cmake g++ pkg-config curl wget ca-certificates fakeroot \
+            python3 libwayland-dev file
+
+      - name: Install Cap'n Proto from source
+        run: |
+          cd /tmp
+          curl -fsSL -O "https://capnproto.org/capnproto-c++-${CAPNP_VERSION}.tar.gz"
+          tar zxf "capnproto-c++-${CAPNP_VERSION}.tar.gz"
+          cd "capnproto-c++-${CAPNP_VERSION}"
+          ./configure
+          make -j"$(nproc)"
+          make install
+          ldconfig
+
+      - name: Download & install voyant-api (${{ needs.config.outputs.sdk_version }})
+        run: |
+          set -euo pipefail
+          ARCH="$(dpkg --print-architecture)"
+          wget -q -O /tmp/voyant-api.tar.gz "${{ needs.config.outputs.sdk_tarball_url }}"
+          mkdir -p /tmp/voyant-api-extract
+          tar -xzf /tmp/voyant-api.tar.gz -C /tmp/voyant-api-extract
+          API_DEB="$(find /tmp/voyant-api-extract -name "voyant-api_*${ARCH}.deb" | head -n 1)"
+          DEV_DEB="$(find /tmp/voyant-api-extract -name "voyant-api-dev_*${ARCH}.deb" | head -n 1)"
+          if [ -z "$API_DEB" ] || [ -z "$DEV_DEB" ]; then
+            echo "::error::voyant-api .deb packages for ARCH=$ARCH not found" >&2
+            find /tmp/voyant-api-extract -type f -name '*.deb' >&2 || true
+            exit 1
+          fi
+          apt-get install -y "$API_DEB" "$DEV_DEB"
+
+      - name: Configure rosdep (trick voyant-api -> voyant-api-dev)
+        run: |
+          mkdir -p /tmp/rosdep
+          cat > /tmp/rosdep/local.yaml <<'EOF'
+          voyant-api:
+            ubuntu:
+              jammy: [voyant-api-dev]
+              noble: [voyant-api-dev]
+          EOF
+          echo "yaml file:///tmp/rosdep/local.yaml" > /etc/ros/rosdep/sources.list.d/50-local.list
+          # Defensive: comment out a known-problematic debian.yaml line if present.
+          if [ -f /etc/ros/rosdep/sources.list.d/10-debian.list ]; then
+            sed -i '/debian.yaml/s/^/# /' /etc/ros/rosdep/sources.list.d/10-debian.list
+          fi
+          rosdep update
+
+      - name: Install package build dependencies via rosdep
+        run: |
+          . "/opt/ros/${{ matrix.ros_distro }}/setup.sh"
+          rosdep install --from-paths . --ignore-src -y \
+            --rosdistro "${{ matrix.ros_distro }}"
+
+      - name: Generate debian & build package
+        run: |
+          set -euo pipefail
+          . "/opt/ros/${{ matrix.ros_distro }}/setup.sh"
+          bloom-generate rosdebian \
+            --os-name ubuntu \
+            --os-version "${{ matrix.os_version }}" \
+            --ros-distro "${{ matrix.ros_distro }}"
+          # Cap'n Proto is installed from source (not an apt package), so let
+          # dpkg-shlibdeps ignore the missing dependency info for libcapnp.
+          sed -i '/^override_dh_shlibdeps:/,/^$/s/dh_shlibdeps/dh_shlibdeps --dpkg-shlibdeps-params=--ignore-missing-info/' debian/rules
+          fakeroot debian/rules binary
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p artifacts
+          # bloom emits the .deb one level up from the package dir.
+          find .. -maxdepth 1 -name "ros-${{ matrix.ros_distro }}-voyant-ros*.deb" \
+            -exec cp {} artifacts/ \;
+          echo "=== built artifacts ==="
+          ls -la artifacts/
+          test -n "$(ls -A artifacts/)" || { echo "::error::no .deb produced" >&2; exit 1; }
+
+      - name: Upload debian artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deb-${{ matrix.ros_distro }}
+          path: artifacts/*.deb
+          retention-days: 90
+
+  test-install:
+    needs: [config, build]
+    runs-on: ubuntu-latest
+    container: osrf/ros:${{ matrix.ros_distro }}-desktop
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - ros_distro: humble
+          - ros_distro: jazzy
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - name: Install runtime tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            curl wget ca-certificates python3 build-essential
+
+      - name: Install Cap'n Proto from source
+        run: |
+          cd /tmp
+          curl -fsSL -O "https://capnproto.org/capnproto-c++-${CAPNP_VERSION}.tar.gz"
+          tar zxf "capnproto-c++-${CAPNP_VERSION}.tar.gz"
+          cd "capnproto-c++-${CAPNP_VERSION}"
+          ./configure
+          make -j"$(nproc)"
+          make install
+          ldconfig
+
+      - name: Download & install voyant-api (${{ needs.config.outputs.sdk_version }})
+        run: |
+          set -euo pipefail
+          ARCH="$(dpkg --print-architecture)"
+          wget -q -O /tmp/voyant-api.tar.gz "${{ needs.config.outputs.sdk_tarball_url }}"
+          mkdir -p /tmp/voyant-api-extract
+          tar -xzf /tmp/voyant-api.tar.gz -C /tmp/voyant-api-extract
+          API_DEB="$(find /tmp/voyant-api-extract -name "voyant-api_*${ARCH}.deb" | head -n 1)"
+          DEV_DEB="$(find /tmp/voyant-api-extract -name "voyant-api-dev_*${ARCH}.deb" | head -n 1)"
+          apt-get install -y "$API_DEB" "$DEV_DEB"
+
+      - name: Download built debian artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: deb-${{ matrix.ros_distro }}
+          path: deb/
+
+      - name: Install ros-${{ matrix.ros_distro }}-voyant-ros
+        run: |
+          set -euo pipefail
+          echo "=== contents of deb/ ==="
+          ls -la deb/
+          DEB="$(find deb -name "ros-${{ matrix.ros_distro }}-voyant-ros*.deb" | head -n 1)"
+          [ -n "$DEB" ] || { echo "::error::no .deb to install" >&2; exit 1; }
+          apt-get update
+          apt-get install -y "./$DEB"
+
+      - name: Smoke test against the Carbon simulator
+        run: |
+          set -uo pipefail
+          . "/opt/ros/${{ matrix.ros_distro }}/setup.bash"
+          CFG="/opt/ros/${{ matrix.ros_distro }}/share/voyant_ros/config/sensor_params.yaml"
+          if [ -f "$CFG" ]; then
+            sed -i "s|interface_address:.*|interface_address: '127.0.0.1'|" "$CFG"
+          fi
+
+          # Start the simulator in the background.
+          voyant_carbon_simulator --bind-addr 127.0.0.1:0 --group-addr 224.0.0.0:5678 \
+            > /tmp/sim.log 2>&1 &
+          SIM_PID=$!
+          sleep 3
+
+          # Run the node for a bounded window; timeout -> 124 is success.
+          set +e
+          timeout 20s ros2 run voyant_ros voyant_sensor_node --ros-args \
+            ${CFG:+--params-file "$CFG"} > /tmp/node.log 2>&1
+          RC=$?
+          set -e
+          kill "$SIM_PID" 2>/dev/null || true
+
+          echo "=== node.log ==="; cat /tmp/node.log || true
+          echo "=== sim.log ===";  cat /tmp/sim.log  || true
+
+          if grep -qiE "invalid opcode|segmentation fault|terminate called|core dumped" /tmp/node.log; then
+            echo "::error::node reported a fatal error" >&2
+            exit 1
+          fi
+          # 124 = timed out (still running = healthy); 0 = clean exit. Anything else fails.
+          if [ "$RC" -ne 124 ] && [ "$RC" -ne 0 ]; then
+            echo "::error::voyant_sensor_node exited with code $RC" >&2
+            exit 1
+          fi
+          echo "Smoke test passed (rc=$RC)."
+
+  release:
+    needs: [config, build, test-install]
+    if: ${{ needs.config.outputs.publish == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+
+      - name: Download all debian artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: deb-*
+          path: release-artifacts/
+          merge-multiple: true
+
+      - name: List artifacts
+        run: ls -la release-artifacts/
+
+      - name: Determine release tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          else
+            VERSION="$(grep -oPm1 '(?<=<version>)[^<]+' package.xml)"
+            echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: ${{ steps.tag.outputs.tag }}
+          files: release-artifacts/*.deb
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(steps.tag.outputs.tag, '-rc') || contains(steps.tag.outputs.tag, '-beta') || contains(steps.tag.outputs.tag, '-alpha') }}
+          body: |
+            Automated debian release of `voyant_ros`.
+
+            Built against **voyant-sdk `${{ needs.config.outputs.sdk_version }}`**.
+
+            Targets: `ros-humble-voyant-ros` (jammy) and `ros-jazzy-voyant-ros` (noble), amd64.
