@@ -42,6 +42,12 @@ env:
   SDK_REPO: Voyant-Photonics/voyant-sdk
   CAPNP_VERSION: '1.1.0'
 
+# Containers (ros:*, osrf/ros:*) can default to dash; force bash so `set -o
+# pipefail` and other bashisms work in every run step.
+defaults:
+  run:
+    shell: bash
+
 jobs:
   config:
     runs-on: ubuntu-latest
@@ -95,6 +101,21 @@ jobs:
             echo "::error::voyant-sdk release '${RESOLVED_TAG:-$SDKV}' has no debian .tar.gz asset" >&2
             exit 1
           fi
+
+          # Verify the release actually ships both debs we need (fail fast,
+          # before any container/Cap'n Proto work). Runners are amd64.
+          ARCH="$(dpkg --print-architecture)"
+          wget -q -O /tmp/voyant-api.tar.gz "$TARBALL_URL"
+          mkdir -p /tmp/voyant-api-extract
+          tar -xzf /tmp/voyant-api.tar.gz -C /tmp/voyant-api-extract
+          API_DEB="$(find /tmp/voyant-api-extract -name "voyant-api_*${ARCH}.deb" | head -n 1)"
+          DEV_DEB="$(find /tmp/voyant-api-extract -name "voyant-api-dev_*${ARCH}.deb" | head -n 1)"
+          if [ -z "$API_DEB" ] || [ -z "$DEV_DEB" ]; then
+            echo "::error::voyant-sdk release '${RESOLVED_TAG:-$SDKV}' is missing voyant-api / voyant-api-dev .deb for ${ARCH}" >&2
+            find /tmp/voyant-api-extract -type f -name '*.deb' >&2 || true
+            exit 1
+          fi
+          echo "Found debs: $(basename "$API_DEB"), $(basename "$DEV_DEB")"
 
           echo "sdk_version=${RESOLVED_TAG:-$SDKV}" >> "$GITHUB_OUTPUT"
           echo "sdk_tarball_url=${TARBALL_URL}" >> "$GITHUB_OUTPUT"
