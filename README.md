@@ -3,14 +3,14 @@
 [![CI](https://github.com/Voyant-Photonics/voyant-ros/actions/workflows/docker-image.yml/badge.svg?branch=main)](https://github.com/Voyant-Photonics/voyant-ros/actions/workflows/docker-image.yml)
 ![ROS 2](https://img.shields.io/badge/ROS%202-Humble%20%7C%20Jazzy-blue)
 ![Ubuntu](https://img.shields.io/badge/Ubuntu-22.04%20%7C%2024.04-orange)
-![voyant-api](https://img.shields.io/badge/voyant--api-%E2%89%A5%200.9.2-green)
+![voyant-api](https://img.shields.io/badge/voyant--api-%E2%89%A5%200.9.3-green)
 [![License](https://img.shields.io/github/license/Voyant-Photonics/voyant-ros)](LICENSE)
 [![Latest release](https://img.shields.io/github/v/release/Voyant-Photonics/voyant-ros)](https://github.com/Voyant-Photonics/voyant-ros/releases)
 
 This ROS2 package provides support for Voyant sensors.
 Configure the sensor (client) address using the `config/sensor_params.yaml` file.
-Pre-built Debian packages target `ROS2 Humble` and `Ubuntu 22.04`.
-`ROS2 Jazzy` and `Ubuntu 24.04` are supported by building from source.
+Pre-built Debian packages are published for `ROS2 Humble` (Ubuntu 22.04) and
+`ROS2 Jazzy` (Ubuntu 24.04). Building from source is also supported.
 For other OS/distro combinations, refer to [Option 3: Docker](#option-3-docker) below.
 
 ## Supported device
@@ -27,11 +27,19 @@ Install ROS2 for your target platform:
 
 ## Installation
 
-### Option 1: Native — Ubuntu 22.04 + ROS2 Humble (pre-built packages)
+### Option 1: Native — pre-built packages (recommended)
 
-#### 1. Install ROS2 Humble
+> Pre-built `.deb` packages are published for **Ubuntu 22.04 / ROS2 Humble** and
+> **Ubuntu 24.04 / ROS2 Jazzy**. The steps below use Humble; for Jazzy, substitute
+> `jazzy` for `humble` throughout (and install `ros-jazzy-voyant-ros` instead of
+> `ros-humble-voyant-ros`).
 
-Follow the official [ROS2 Humble installation guide](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html).
+#### 1. Install ROS2
+
+Follow the official installation guide for your platform:
+[ROS2 Humble](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html)
+(Ubuntu 22.04) or [ROS2 Jazzy](https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html)
+(Ubuntu 24.04).
 
 #### 2. Install Cap'n Proto
 
@@ -54,13 +62,16 @@ Download the following `.deb` files from the [latest voyant-ros release](https:/
 
 - `voyant-api_*_amd64.deb`
 - `voyant-api-dev_*_amd64.deb`
-- `ros-humble-voyant-ros_*_amd64.deb`
+- `ros-humble-voyant-ros_*_amd64.deb` **or** `ros-jazzy-voyant-ros_*_amd64.deb` (match your ROS2 distro)
 
 ```bash
 cd ~/Downloads  # or wherever you saved the .deb files
 sudo apt update
 sudo apt install -y ./voyant-api*.deb
+# Humble (Ubuntu 22.04):
 sudo apt install -y ./ros-humble-voyant-ros*.deb
+# Jazzy (Ubuntu 24.04):
+# sudo apt install -y ./ros-jazzy-voyant-ros*.deb
 ```
 
 #### 4. [Optional] Install visualization tools
@@ -69,12 +80,16 @@ sudo apt install -y ./ros-humble-voyant-ros*.deb
 - Install the ROS2-Foxglove bridge:
 
   ```bash
-  sudo apt install ros-humble-foxglove-bridge
+  sudo apt install ros-humble-foxglove-bridge  # or ros-jazzy-foxglove-bridge
   ```
 
 ---
 
-### Option 2: Native — Ubuntu 24.04 + ROS2 Jazzy (build from source)
+### Option 2: Native — build from source (Ubuntu 24.04 + ROS2 Jazzy)
+
+> Use this for development, or if you need a configuration without a pre-built
+> package. Otherwise [Option 1](#option-1-native--pre-built-packages-recommended)
+> is the simpler path.
 
 #### 1. Install ROS2 Jazzy
 
@@ -313,7 +328,7 @@ every push.
 
 A published release bundles four version-matched `amd64` Debian packages: the
 two ROS packages plus `voyant-api_*.deb` and `voyant-api-dev_*.deb` pulled from the
-selected `voyant-sdk` release.
+matching `voyant-sdk` release.
 
 ### Cut a release (the normal path)
 
