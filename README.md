@@ -9,6 +9,10 @@
 
 This ROS2 package provides support for Voyant sensors.
 Configure the sensor (client) address using the `config/sensor_params.yaml` file.
+It requires [`voyant-api`](https://github.com/Voyant-Photonics/voyant-sdk) **≥ 0.9.2**
+(the Carbon baseline). Pre-built releases bundle the version-matched `voyant-api`
+packages, so you only install `voyant-api` yourself when building from source —
+any release ≥ 0.9.2 works there.
 Pre-built Debian packages are published for `ROS2 Humble` (Ubuntu 22.04) and
 `ROS2 Jazzy` (Ubuntu 24.04). Building from source is also supported.
 For other OS/distro combinations, refer to [Option 3: Docker](#option-3-docker) below.
@@ -339,7 +343,7 @@ against (versions are lockstep — `voyant-ros vX.Y.Z` is built against
 
 1. Branch and bump `<version>` in [`package.xml`](package.xml) (e.g. to `0.9.3`).
 2. Dry run to validate: **Actions → Build & Release Debian → Run workflow** on
-   your branch with `dry_run` checked. This builds + smoke-tests against
+   your branch. A manual run always builds + smoke-tests against
    `voyant-sdk v0.9.3` (the package.xml version) without publishing.
 3. Merge to `main`.
 4. Tag the matching version and push:
@@ -357,10 +361,10 @@ with auto-generated notes from the commit/PR history.
 
 ### Dry run
 
-The workflow always builds against `v<package.xml version>`. To validate without
-publishing, use **Run workflow** with `dry_run` checked (build + test only).
-Unchecking `dry_run` publishes a release tagged `v<package.xml version>` without
-needing a git tag.
+A manual run never publishes — it always builds + smoke-tests against
+`v<package.xml version>`. Use it to validate a branch before tagging:
+**Actions → Build & Release Debian → Run workflow**. Publishing happens only on a
+`v*` tag push.
 
 > **Note**
 > The manual **Run workflow** button only appears once the workflow file is on
@@ -368,7 +372,7 @@ needing a git tag.
 > the CLI:
 >
 > ```bash
-> gh workflow run release-debian.yml --ref <branch> -f dry_run=true
+> gh workflow run release-debian.yml --ref <branch>
 > ```
 
 The manual build steps this automates are documented in [`docs/debian.md`](docs/debian.md).
