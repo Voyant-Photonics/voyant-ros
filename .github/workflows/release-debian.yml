@@ -15,16 +15,11 @@ name: Build & Release Debian
 #       - real release. The tag must equal v<package.xml version> or the run
 #         fails fast.
 #   * Manual (Actions -> "Build & Release Debian" -> Run workflow):
-#       - dry_run: true  -> build + test only (default)
-#                  false -> also publish a release tagged v<package.xml version>
+#       - always a dry run: builds + smoke-tests against v<package.xml version>
+#         without publishing. Use it to validate a branch before tagging.
 
 on:
   workflow_dispatch:
-    inputs:
-      dry_run:
-        description: 'Dry run (build + test only). Uncheck to publish a release.'
-        type: boolean
-        default: true
   push:
     tags:
       - 'v*'
@@ -67,7 +62,8 @@ jobs:
           RELEASE_TAG="v${PKG_VERSION}"
           echo "package.xml version: ${PKG_VERSION} -> ${RELEASE_TAG}"
 
-          # Do we publish?
+          # Publish only on a tag push; everything else (manual dispatch) is a
+          # dry run that builds + smoke-tests without publishing.
           if [ "${{ github.ref_type }}" = "tag" ]; then
             # Tag push: the tag must match package.xml, then publish.
             if [ "${{ github.ref_name }}" != "$RELEASE_TAG" ]; then
@@ -75,10 +71,7 @@ jobs:
               exit 1
             fi
             PUBLISH=true
-          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            if [ "${{ inputs.dry_run }}" = "false" ]; then PUBLISH=true; else PUBLISH=false; fi
           else
-            # Branch push (e.g. the temporary test trigger): dry-run only.
             PUBLISH=false
           fi
 
