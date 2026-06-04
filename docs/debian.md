@@ -97,7 +97,7 @@ Start from a directory that has:
 
 ```bash
 $ ls debs/
-ros-humble-voyant-ros_0.10.0-0jammy_amd64.deb  voyant-api_0.10.0-1_amd64.deb  voyant-api-dev_0.10.0-1_amd64.deb
+ros-humble-voyant-ros_0.10.1-0jammy_amd64.deb  voyant-api_0.10.1-1_amd64.deb  voyant-api-dev_0.10.1-1_amd64.deb
 ```
 
 Then run a clean ROS humble docker container:
