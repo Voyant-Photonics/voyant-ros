@@ -62,9 +62,10 @@ jobs:
           RELEASE_TAG="v${PKG_VERSION}"
           echo "package.xml version: ${PKG_VERSION} -> ${RELEASE_TAG}"
 
-          # Publish only on a tag push; everything else (manual dispatch) is a
-          # dry run that builds + smoke-tests without publishing.
-          if [ "${{ github.ref_type }}" = "tag" ]; then
+          # Publish ONLY on an actual tag push. A manual dispatch is always a dry
+          # run -- including when dispatched against a tag ref (ref_type would be
+          # 'tag' there too), so we also require the event to be a push.
+          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref_type }}" = "tag" ]; then
             # Tag push: the tag must match package.xml, then publish.
             if [ "${{ github.ref_name }}" != "$RELEASE_TAG" ]; then
               echo "::error::pushed tag '${{ github.ref_name }}' does not match package.xml version ('$RELEASE_TAG'). Bump package.xml to match the tag." >&2
