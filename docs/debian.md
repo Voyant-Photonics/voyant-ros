@@ -17,7 +17,9 @@ mkdir -p ~/rosdep
 cat > ~/rosdep/local.yaml << EOF
 voyant-api:
   ubuntu:
-    jammy: [voyant-api-dev]
+    jammy: [voyant-api-dev]      # humble (Ubuntu 22.04)
+    noble: [voyant-api-dev]      # jazzy / kilted (Ubuntu 24.04)
+    resolute: [voyant-api-dev]   # lyrical (Ubuntu 26.04)
 EOF
 
 # Add it to rosdep sources
@@ -39,7 +41,9 @@ And try `rosdep update` again.
 
 ## Generate a release
 
-From `voyant-ros/` generate a debian with:
+From `voyant-ros/` generate a debian with (swap `--os-version` / `--ros-distro`
+for your target — `jammy`+`humble`, `noble`+`jazzy`, `noble`+`kilted`, or
+`resolute`+`lyrical`):
 
 ```bash
 bloom-generate rosdebian --os-name ubuntu --os-version jammy --ros-distro humble

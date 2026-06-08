@@ -133,6 +133,10 @@ jobs:
             os_version: jammy
           - ros_distro: jazzy
             os_version: noble
+          - ros_distro: kilted
+            os_version: noble
+          - ros_distro: lyrical
+            os_version: resolute
     env:
       DEBIAN_FRONTEND: noninteractive
     steps:
@@ -182,6 +186,7 @@ jobs:
             ubuntu:
               jammy: [voyant-api-dev]
               noble: [voyant-api-dev]
+              resolute: [voyant-api-dev]
           EOF
           echo "yaml file:///tmp/rosdep/local.yaml" > /etc/ros/rosdep/sources.list.d/50-local.list
           # Defensive: comment out a known-problematic debian.yaml line if present.
@@ -237,6 +242,8 @@ jobs:
         include:
           - ros_distro: humble
           - ros_distro: jazzy
+          - ros_distro: kilted
+          - ros_distro: lyrical
     env:
       DEBIAN_FRONTEND: noninteractive
     steps:
@@ -427,6 +434,8 @@ jobs:
             **voyant-sdk `${{ needs.config.outputs.sdk_version }}`** (amd64).
 
             Assets:
-            - `ros-humble-voyant-ros_*.deb` (jammy)
-            - `ros-jazzy-voyant-ros_*.deb` (noble)
+            - `ros-humble-voyant-ros_*.deb` (jammy / Ubuntu 22.04)
+            - `ros-jazzy-voyant-ros_*.deb` (noble / Ubuntu 24.04)
+            - `ros-kilted-voyant-ros_*.deb` (noble / Ubuntu 24.04)
+            - `ros-lyrical-voyant-ros_*.deb` (resolute / Ubuntu 26.04)
             - `voyant-api_*.deb` and `voyant-api-dev_*.deb` (from voyant-sdk `${{ needs.config.outputs.sdk_version }}`)

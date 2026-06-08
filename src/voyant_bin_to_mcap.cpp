@@ -83,12 +83,19 @@ int main(int argc, char *argv[])
     serializer.serialize_message(&cloud, &serialized_msg);
 
     auto bag_msg = std::make_shared<rosbag2_storage::SerializedBagMessage>();
-#if defined(ROS2_ROLLING) || defined(ROS2_JAZZY)
-    bag_msg->recv_timestamp = rclcpp::Time(cloud.header.stamp).nanoseconds();
-#else
+#if defined(ROS2_HUMBLE)
+    // rosbag2 renamed SerializedBagMessage::time_stamp -> recv_timestamp in
+    // Jazzy. Humble is the only supported distro still on the legacy field;
+    // everything else (Jazzy, Kilted, Lyrical, Rolling, and newer) uses
+    // recv_timestamp, so the #else branch is the forward-compatible default.
     bag_msg->time_stamp = rclcpp::Time(cloud.header.stamp).nanoseconds();
+#else
+    bag_msg->recv_timestamp = rclcpp::Time(cloud.header.stamp).nanoseconds();
 #endif
-    bag_msg->topic_name = "/point_cloud";
+    // Must match the topic created above (writer->create_topic), which uses the
+    // configured topic_name -- otherwise a non-default topic_name writes to a
+    // topic that was never created.
+    bag_msg->topic_name = converter.config.topic_name;
     bag_msg->serialized_data = std::make_shared<rcutils_uint8_array_t>();
 
     rcutils_allocator_t allocator = rcutils_get_default_allocator();

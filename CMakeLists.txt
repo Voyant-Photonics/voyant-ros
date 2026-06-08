@@ -5,15 +5,14 @@ if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 17)
 endif()
 
-# Detect ROS 2 distro version automatically
+# Detect ROS 2 distro for distro-specific build logic.
+# rosbag2 renamed SerializedBagMessage::time_stamp -> recv_timestamp in Jazzy, so
+# flag Humble -- the only supported distro still on the legacy field. Every newer
+# distro (Jazzy, Kilted, Lyrical, Rolling, ...) uses recv_timestamp and needs no
+# macro. See src/voyant_bin_to_mcap.cpp.
 if(DEFINED ENV{ROS_DISTRO})
   message(STATUS "Detected ROS_DISTRO: $ENV{ROS_DISTRO}")
-
-  if("$ENV{ROS_DISTRO}" STREQUAL "rolling")
-    add_compile_definitions(ROS2_ROLLING)
-  elseif("$ENV{ROS_DISTRO}" STREQUAL "jazzy")
-    add_compile_definitions(ROS2_JAZZY)
-  elseif("$ENV{ROS_DISTRO}" STREQUAL "humble")
+  if("$ENV{ROS_DISTRO}" STREQUAL "humble")
     add_compile_definitions(ROS2_HUMBLE)
   endif()
 endif()
@@ -41,6 +40,28 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_compile_options(-Wall -Wextra)
 
 # ==============================
+# Dependency linking helper
+# ==============================
+# ament_target_dependencies() was deprecated in Kilted and REMOVED in Lyrical.
+# Keep using it where it still exists (Humble / Jazzy / Kilted); on Lyrical and
+# newer, fall back to modern namespaced CMake targets. Almost every ament
+# package exports a `<pkg>::<pkg>` target; message packages (e.g. sensor_msgs)
+# expose their interface libraries via `${<pkg>_TARGETS}` instead.
+function(voyant_target_deps target)
+  if(COMMAND ament_target_dependencies)
+    ament_target_dependencies(${target} ${ARGN})
+  else()
+    foreach(pkg ${ARGN})
+      if(DEFINED ${pkg}_TARGETS)
+        target_link_libraries(${target} ${${pkg}_TARGETS})
+      else()
+        target_link_libraries(${target} ${pkg}::${pkg})
+      endif()
+    endforeach()
+  endif()
+endfunction()
+
+# ==============================
 # Include & Link Directories
 # ==============================
 include_directories(${PCL_INCLUDE_DIRS} include)
@@ -58,7 +79,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 # Executables & Link libraries
 # ==============================
 add_executable(voyant_sensor_node src/main.cpp src/sensor_driver.cpp)
-ament_target_dependencies(voyant_sensor_node
+voyant_target_deps(voyant_sensor_node
   rclcpp
   sensor_msgs
   pcl_conversions
@@ -71,7 +92,7 @@ target_link_libraries(voyant_sensor_node
 
 # ======= bin2mcap converter =======
 add_executable(voyant_bin_to_mcap src/bin_to_mcap.cpp src/voyant_bin_to_mcap.cpp)
-ament_target_dependencies(voyant_bin_to_mcap
+voyant_target_deps(voyant_bin_to_mcap
   rclcpp
   sensor_msgs
   pcl_conversions
@@ -89,7 +110,7 @@ set_target_properties(voyant_bin_to_mcap
 
 # ======= mcap2bin converter =======
 add_executable(voyant_mcap_to_bin src/mcap_to_bin.cpp src/voyant_mcap_to_bin.cpp)
-ament_target_dependencies(voyant_mcap_to_bin
+voyant_target_deps(voyant_mcap_to_bin
   rclcpp
   sensor_msgs
   pcl_conversions
