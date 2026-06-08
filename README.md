@@ -1,8 +1,8 @@
 # Official ROS2 drivers for Voyant LiDARs
 
 [![CI](https://github.com/Voyant-Photonics/voyant-ros/actions/workflows/docker-image.yml/badge.svg?branch=main)](https://github.com/Voyant-Photonics/voyant-ros/actions/workflows/docker-image.yml)
-![ROS 2](https://img.shields.io/badge/ROS%202-Humble%20%7C%20Jazzy-blue)
-![Ubuntu](https://img.shields.io/badge/Ubuntu-22.04%20%7C%2024.04-orange)
+![ROS 2](https://img.shields.io/badge/ROS%202-Humble%20%7C%20Jazzy%20%7C%20Kilted%20%7C%20Lyrical-blue)
+![Ubuntu](https://img.shields.io/badge/Ubuntu-22.04%20%7C%2024.04%20%7C%2026.04-orange)
 ![voyant-api](https://img.shields.io/badge/voyant--api-%E2%89%A5%200.9.2-green)
 [![License](https://img.shields.io/github/license/Voyant-Photonics/voyant-ros)](LICENSE)
 [![Latest release](https://img.shields.io/github/v/release/Voyant-Photonics/voyant-ros)](https://github.com/Voyant-Photonics/voyant-ros/releases)
@@ -13,8 +13,9 @@ It requires [`voyant-api`](https://github.com/Voyant-Photonics/voyant-sdk) **≥
 (the Carbon baseline). Pre-built releases bundle the version-matched `voyant-api`
 packages, so you only install `voyant-api` yourself when building from source —
 any release ≥ 0.9.2 works there.
-Pre-built Debian packages are published for `ROS2 Humble` (Ubuntu 22.04) and
-`ROS2 Jazzy` (Ubuntu 24.04). Building from source is also supported.
+Pre-built Debian packages are published for `ROS2 Humble` (Ubuntu 22.04),
+`ROS2 Jazzy` (Ubuntu 24.04), `ROS2 Kilted` (Ubuntu 24.04), and `ROS2 Lyrical`
+(Ubuntu 26.04). Building from source is also supported.
 For other OS/distro combinations, refer to [Option 3: Docker](#option-3-docker) below.
 
 ## Supported device
@@ -28,22 +29,27 @@ Install ROS2 for your target platform:
 
 - Ubuntu 22.04: [ROS2 Humble installation guide](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html)
 - Ubuntu 24.04: [ROS2 Jazzy installation guide](https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html)
+- Ubuntu 24.04: [ROS2 Kilted installation guide](https://docs.ros.org/en/kilted/Installation/Ubuntu-Install-Debs.html)
+- Ubuntu 26.04: [ROS2 Lyrical installation guide](https://docs.ros.org/en/lyrical/Installation/Ubuntu-Install-Debs.html)
 
 ## Installation
 
 ### Option 1: Native — pre-built packages (recommended)
 
-> Pre-built `.deb` packages are published for **Ubuntu 22.04 / ROS2 Humble** and
-> **Ubuntu 24.04 / ROS2 Jazzy**. The steps below use Humble; for Jazzy, substitute
-> `jazzy` for `humble` throughout (and install `ros-jazzy-voyant-ros` instead of
-> `ros-humble-voyant-ros`).
+> Pre-built `.deb` packages are published for **Ubuntu 22.04 / ROS2 Humble**,
+> **Ubuntu 24.04 / ROS2 Jazzy**, **Ubuntu 24.04 / ROS2 Kilted**, and
+> **Ubuntu 26.04 / ROS2 Lyrical**. The steps below use Humble; for another distro,
+> substitute its name for `humble` throughout (and install
+> `ros-<distro>-voyant-ros` instead of `ros-humble-voyant-ros`).
 
 #### 1. Install ROS2
 
 Follow the official installation guide for your platform:
 [ROS2 Humble](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html)
-(Ubuntu 22.04) or [ROS2 Jazzy](https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html)
-(Ubuntu 24.04).
+(Ubuntu 22.04), [ROS2 Jazzy](https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html)
+(Ubuntu 24.04), [ROS2 Kilted](https://docs.ros.org/en/kilted/Installation/Ubuntu-Install-Debs.html)
+(Ubuntu 24.04), or [ROS2 Lyrical](https://docs.ros.org/en/lyrical/Installation/Ubuntu-Install-Debs.html)
+(Ubuntu 26.04).
 
 #### 2. Install Cap'n Proto
 
@@ -66,16 +72,20 @@ Download the following `.deb` files from the [latest voyant-ros release](https:/
 
 - `voyant-api_*_amd64.deb`
 - `voyant-api-dev_*_amd64.deb`
-- `ros-humble-voyant-ros_*_amd64.deb` **or** `ros-jazzy-voyant-ros_*_amd64.deb` (match your ROS2 distro)
+- `ros-<distro>-voyant-ros_*_amd64.deb` — match your ROS2 distro: `ros-humble-…`
+  (Ubuntu 22.04), `ros-jazzy-…` (Ubuntu 24.04), `ros-kilted-…` (Ubuntu 24.04),
+  or `ros-lyrical-…` (Ubuntu 26.04)
 
 ```bash
 cd ~/Downloads  # or wherever you saved the .deb files
 sudo apt update
 sudo apt install -y ./voyant-api*.deb
-# Humble (Ubuntu 22.04):
+# Install the package matching your ROS2 distro, e.g.:
+# Humble  (Ubuntu 22.04): sudo apt install -y ./ros-humble-voyant-ros*.deb
+# Jazzy   (Ubuntu 24.04): sudo apt install -y ./ros-jazzy-voyant-ros*.deb
+# Kilted  (Ubuntu 24.04): sudo apt install -y ./ros-kilted-voyant-ros*.deb
+# Lyrical (Ubuntu 26.04): sudo apt install -y ./ros-lyrical-voyant-ros*.deb
 sudo apt install -y ./ros-humble-voyant-ros*.deb
-# Jazzy (Ubuntu 24.04):
-# sudo apt install -y ./ros-jazzy-voyant-ros*.deb
 ```
 
 #### 4. [Optional] Install visualization tools
@@ -84,7 +94,7 @@ sudo apt install -y ./ros-humble-voyant-ros*.deb
 - Install the ROS2-Foxglove bridge:
 
   ```bash
-  sudo apt install ros-humble-foxglove-bridge  # or ros-jazzy-foxglove-bridge
+  sudo apt install ros-humble-foxglove-bridge  # or ros-<distro>-foxglove-bridge
   ```
 
 ---
@@ -167,7 +177,7 @@ colcon build --symlink-install --packages-select voyant_ros
 ### Option 3: Docker
 
 Use this for other OS/distro combinations, custom RMW implementations, or isolated environments.
-The image has been tested with ROS2 Humble and Jazzy, and RMW implementations FastRTPS and CycloneDDS.
+The image has been tested with ROS2 Humble, Jazzy, Kilted, and Lyrical, and RMW implementations FastRTPS and CycloneDDS.
 
 Build from the repo root:
 
@@ -175,7 +185,7 @@ Build from the repo root:
 docker build --build-arg "VIZ_BRIDGE=true" -t voyant_ros2_container .
 ```
 
-To target a specific ROS distro or RMW implementation (`ROS_DISTRO`: `humble` or `jazzy`; `RMW_IMPLEMENTATION`: `rmw_fastrtps_cpp` or `rmw_cyclonedds_cpp`):
+To target a specific ROS distro or RMW implementation (`ROS_DISTRO`: `humble`, `jazzy`, `kilted`, or `lyrical`; `RMW_IMPLEMENTATION`: `rmw_fastrtps_cpp` or `rmw_cyclonedds_cpp`):
 
 ```bash
 docker build --build-arg "VIZ_BRIDGE=true" \
@@ -323,15 +333,16 @@ pre-commit run --all-files
 ## Releasing (maintainers)
 
 Releases are built and published by the [`Build & Release Debian`](.github/workflows/release-debian.yml)
-GitHub Action. It builds the `ros-humble-voyant-ros` (jammy) and `ros-jazzy-voyant-ros`
-(noble) Debian packages against the matching [`voyant-sdk`](https://github.com/Voyant-Photonics/voyant-sdk/releases)
+GitHub Action. It builds the `ros-humble-voyant-ros` (jammy), `ros-jazzy-voyant-ros`
+(noble), `ros-kilted-voyant-ros` (noble), and `ros-lyrical-voyant-ros` (resolute)
+Debian packages against the matching [`voyant-sdk`](https://github.com/Voyant-Photonics/voyant-sdk/releases)
 release (`v<package.xml version>`), smoke-tests installation in a clean container,
 and attaches all packages to a GitHub Release. This is separate from the per-PR build in
 [`docker-image.yml`](.github/workflows/docker-image.yml) and does **not** run on
 every push.
 
-A published release bundles four version-matched `amd64` Debian packages: the
-two ROS packages plus `voyant-api_*.deb` and `voyant-api-dev_*.deb` pulled from the
+A published release bundles six version-matched `amd64` Debian packages: the
+four ROS packages plus `voyant-api_*.deb` and `voyant-api-dev_*.deb` pulled from the
 matching `voyant-sdk` release.
 
 ### Cut a release (the normal path)
