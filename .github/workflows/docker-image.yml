@@ -25,8 +25,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft != true }}
-    # TODO: remove this when rolling build error is fixed in a follow up PR
-    continue-on-error: ${{ matrix.ros_distro == 'rolling' }}
 
     strategy:
       fail-fast: false
@@ -35,7 +33,9 @@ jobs:
         # rolling dropped: upstream packaging churn (e.g. inconsistent
         # message_filters / pcl_conversions imported-target exports against
         # std_msgs / rosidl_buffer) makes CI unreliable.
-        ros_distro: [humble, jazzy]
+        # humble: Ubuntu 22.04 (jammy)   | jazzy:   Ubuntu 24.04 (noble)
+        # kilted: Ubuntu 24.04 (noble)   | lyrical: Ubuntu 26.04 (resolute)
+        ros_distro: [humble, jazzy, kilted, lyrical]
         rmw: [rmw_fastrtps_cpp, rmw_cyclonedds_cpp]
 
     steps:
