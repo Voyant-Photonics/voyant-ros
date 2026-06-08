@@ -266,22 +266,29 @@ The configurations for ROS2 bag can be found in `config/sensor_params.yaml` file
 
 ### 1. Using the binaries from `colcon build`
 
-If you have already build the `voyant_ros` package using `colcon`, use the binary files as below.
+After building `voyant_ros` with `colcon` from the workspace root (`~/ros2_ws`),
+set `bin_input` and `mcap_output` in `config/sensor_params.yaml` (both are empty
+by default), then source the environment and run the converter. Note the build
+directory is `build/voyant_ros` (package name, underscore), and the converters
+live in its `bin/` subdirectory.
 
 ```bash
-cd ~/ros2_ws/build/voyant-ros
-./bin/voyant_bin_to_mcap ros2_ws/src/voyant-ros/config/sensor_params.yaml # path to your params yaml file
+cd ~/ros2_ws
+source /opt/ros/humble/setup.bash   # or your ROS 2 distro
+source install/setup.bash           # required for the VoyantDeviceMetadata message
+./build/voyant_ros/bin/voyant_bin_to_mcap src/voyant-ros/config/sensor_params.yaml
 ```
 
 ### 2. Build the package using `cmake`
 
 ```bash
 cd ~/ros2_ws/src/voyant-ros
+source /opt/ros/humble/setup.bash   # or your ROS 2 distro
 mkdir -p build
 cd build
 cmake ..
 make
-./bin/voyant_bin_to_mcap ros2_ws/src/voyant-ros/config/sensor_params.yaml # path to your params yaml file
+./bin/voyant_bin_to_mcap ../config/sensor_params.yaml # path to your params yaml file
 ```
 
 ## Converting mcap files to bin format
@@ -302,12 +309,13 @@ colcon build --symlink-install --packages-select voyant_ros
 source install/setup.bash
 ```
 
-Edit the `yaml` config file to pass the correct file paths.
+Edit `config/mcap_to_bin_params.yaml` to set `mcap_input` and `bin_output`
+(both are empty by default).
 
-**Run the tool:**
+**Run the tool** (from the workspace root, `~/ros2_ws`):
 
 ```bash
-./build/voyant_ros/bin/voyant_mcap_to_bin config/mcap_to_bin_params.yaml
+./build/voyant_ros/bin/voyant_mcap_to_bin src/voyant-ros/config/mcap_to_bin_params.yaml
 ```
 
 ## Configuring Foxglove for Pointcloud Visualization
