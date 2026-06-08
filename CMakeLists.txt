@@ -5,19 +5,14 @@ if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 17)
 endif()
 
-# Detect ROS 2 distro version automatically
+# Detect ROS 2 distro for distro-specific build logic.
+# rosbag2 renamed SerializedBagMessage::time_stamp -> recv_timestamp in Jazzy, so
+# flag Humble -- the only supported distro still on the legacy field. Every newer
+# distro (Jazzy, Kilted, Lyrical, Rolling, ...) uses recv_timestamp and needs no
+# macro. See src/voyant_bin_to_mcap.cpp.
 if(DEFINED ENV{ROS_DISTRO})
   message(STATUS "Detected ROS_DISTRO: $ENV{ROS_DISTRO}")
-
-  if("$ENV{ROS_DISTRO}" STREQUAL "rolling")
-    add_compile_definitions(ROS2_ROLLING)
-  elseif("$ENV{ROS_DISTRO}" STREQUAL "lyrical")
-    add_compile_definitions(ROS2_LYRICAL)
-  elseif("$ENV{ROS_DISTRO}" STREQUAL "kilted")
-    add_compile_definitions(ROS2_KILTED)
-  elseif("$ENV{ROS_DISTRO}" STREQUAL "jazzy")
-    add_compile_definitions(ROS2_JAZZY)
-  elseif("$ENV{ROS_DISTRO}" STREQUAL "humble")
+  if("$ENV{ROS_DISTRO}" STREQUAL "humble")
     add_compile_definitions(ROS2_HUMBLE)
   endif()
 endif()
