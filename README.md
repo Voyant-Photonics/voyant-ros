@@ -38,9 +38,14 @@ Install ROS2 for your target platform:
 
 > Pre-built `.deb` packages are published for **Ubuntu 22.04 / ROS2 Humble**,
 > **Ubuntu 24.04 / ROS2 Jazzy**, **Ubuntu 24.04 / ROS2 Kilted**, and
-> **Ubuntu 26.04 / ROS2 Lyrical**. The steps below use Humble; for another distro,
-> substitute its name for `humble` throughout (and install
-> `ros-<distro>-voyant-ros` instead of `ros-humble-voyant-ros`).
+> **Ubuntu 26.04 / ROS2 Lyrical**. The commands below are distro-agnostic: they
+> use the `$ROS_DISTRO` environment variable, which is set automatically once you
+> source your ROS 2 installation (`source /opt/ros/<distro>/setup.bash`). If you
+> haven't sourced it yet in this shell, set it explicitly first, e.g.:
+>
+> ```bash
+> export ROS_DISTRO=jazzy   # one of: humble, jazzy, kilted, lyrical
+> ```
 
 #### 1. Install ROS2
 
@@ -72,20 +77,16 @@ Download the following `.deb` files from the [latest voyant-ros release](https:/
 
 - `voyant-api_*_amd64.deb`
 - `voyant-api-dev_*_amd64.deb`
-- `ros-<distro>-voyant-ros_*_amd64.deb` — match your ROS2 distro: `ros-humble-…`
-  (Ubuntu 22.04), `ros-jazzy-…` (Ubuntu 24.04), `ros-kilted-…` (Ubuntu 24.04),
-  or `ros-lyrical-…` (Ubuntu 26.04)
+- `ros-${ROS_DISTRO}-voyant-ros_*_amd64.deb` — the package matching your distro:
+  `ros-humble-…` (Ubuntu 22.04), `ros-jazzy-…` (Ubuntu 24.04), `ros-kilted-…`
+  (Ubuntu 24.04), or `ros-lyrical-…` (Ubuntu 26.04)
 
 ```bash
 cd ~/Downloads  # or wherever you saved the .deb files
 sudo apt update
 sudo apt install -y ./voyant-api*.deb
-# Install the package matching your ROS2 distro, e.g.:
-# Humble  (Ubuntu 22.04): sudo apt install -y ./ros-humble-voyant-ros*.deb
-# Jazzy   (Ubuntu 24.04): sudo apt install -y ./ros-jazzy-voyant-ros*.deb
-# Kilted  (Ubuntu 24.04): sudo apt install -y ./ros-kilted-voyant-ros*.deb
-# Lyrical (Ubuntu 26.04): sudo apt install -y ./ros-lyrical-voyant-ros*.deb
-sudo apt install -y ./ros-humble-voyant-ros*.deb
+# $ROS_DISTRO is set by sourcing /opt/ros/<distro>/setup.bash (or export it, see above)
+sudo apt install -y ./ros-${ROS_DISTRO}-voyant-ros*.deb
 ```
 
 #### 4. [Optional] Install visualization tools
@@ -94,20 +95,35 @@ sudo apt install -y ./ros-humble-voyant-ros*.deb
 - Install the ROS2-Foxglove bridge:
 
   ```bash
-  sudo apt install ros-humble-foxglove-bridge  # or ros-<distro>-foxglove-bridge
+  sudo apt install ros-${ROS_DISTRO}-foxglove-bridge
   ```
 
 ---
 
-### Option 2: Native — build from source (Ubuntu 24.04 + ROS2 Jazzy)
+### Option 2: Native — build from source
 
-> Use this for development, or if you need a configuration without a pre-built
-> package. Otherwise [Option 1](#option-1-native--pre-built-packages-recommended)
-> is the simpler path.
+> Building from source is the right path when you're:
+>
+> - **developing or modifying** the driver itself,
+> - on a **distro/OS combination without a pre-built package** (Option 1 ships
+>   Humble, Jazzy, Kilted, and Lyrical only),
+> - tracking a **development or pre-release `voyant-api`** rather than a tagged
+>   release, or
+> - testing **unreleased changes** ahead of the next tagged release.
+>
+> Otherwise [Option 1](#option-1-native--pre-built-packages-recommended) is the
+> simpler path.
+>
+> The steps below are distro-agnostic via `$ROS_DISTRO`, which is set once you
+> source your ROS 2 installation. If it isn't set yet in this shell, export it
+> first, e.g. `export ROS_DISTRO=jazzy`.
 
-#### 1. Install ROS2 Jazzy
+<!-- markdownlint-disable-next-line MD024 -->
+#### 1. Install ROS2
 
-Follow the official [ROS2 Jazzy installation guide](https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html).
+Follow the official installation guide for your distro (see
+[Pre-requisites](#pre-requisites) above for the per-distro links), e.g. the
+[ROS2 Jazzy installation guide](https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html).
 
 <!-- markdownlint-disable-next-line MD024 -->
 #### 2. Install Cap'n Proto
@@ -141,7 +157,7 @@ sudo apt install -y ./voyant-api_*amd64.deb \
 #### 4. Install ROS dependencies
 
 ```bash
-sudo apt install ros-jazzy-pcl-ros ros-jazzy-rviz2
+sudo apt install ros-${ROS_DISTRO}-pcl-ros ros-${ROS_DISTRO}-rviz2
 ```
 
 #### 5. Clone and build
@@ -150,7 +166,7 @@ sudo apt install ros-jazzy-pcl-ros ros-jazzy-rviz2
 mkdir -p ~/ros2_ws/src && cd ~/ros2_ws/src
 git clone https://github.com/Voyant-Photonics/voyant-ros.git
 cd ~/ros2_ws
-source /opt/ros/jazzy/setup.bash
+source /opt/ros/${ROS_DISTRO}/setup.bash
 colcon build --symlink-install --packages-select voyant_ros
 ```
 
@@ -169,7 +185,7 @@ colcon build --symlink-install --packages-select voyant_ros
 - Install the ROS2-Foxglove bridge:
 
   ```bash
-  sudo apt install ros-jazzy-foxglove-bridge
+  sudo apt install ros-${ROS_DISTRO}-foxglove-bridge
   ```
 
 ---
@@ -223,7 +239,7 @@ docker run -it --network=host voyant_ros2_container
 **If installed from pre-built packages (Option 1):**
 
 ```bash
-source /opt/ros/humble/setup.bash
+source /opt/ros/<distro>/setup.bash   # e.g. humble, jazzy, kilted, lyrical
 ```
 
 **If built from source (Option 2):**
