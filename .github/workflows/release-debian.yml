@@ -433,6 +433,8 @@ jobs:
             Automated debian release of `voyant_ros`, built against
             **voyant-sdk `${{ needs.config.outputs.sdk_version }}`** (amd64).
 
+            📋 See the [voyant-sdk `${{ needs.config.outputs.sdk_version }}` release notes](https://github.com/Voyant-Photonics/voyant-sdk/releases/tag/${{ needs.config.outputs.sdk_version }}) for the full changelog.
+
             Assets:
             - `ros-humble-voyant-ros_*.deb` (jammy / Ubuntu 22.04)
             - `ros-jazzy-voyant-ros_*.deb` (noble / Ubuntu 24.04)
