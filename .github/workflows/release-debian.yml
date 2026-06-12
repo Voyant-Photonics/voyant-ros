@@ -433,7 +433,7 @@ jobs:
             Automated debian release of `voyant_ros`, built against
             **voyant-sdk `${{ needs.config.outputs.sdk_version }}`** (amd64).
 
-            📋 See the [voyant-sdk `${{ needs.config.outputs.sdk_version }}` release notes](https://github.com/Voyant-Photonics/voyant-sdk/releases/tag/${{ needs.config.outputs.sdk_version }}) for the full changelog.
+            📋 See the [voyant-sdk `${{ needs.config.outputs.sdk_version }}` release notes](https://github.com/${{ env.SDK_REPO }}/releases/tag/${{ needs.config.outputs.sdk_version }}) for the full changelog.
 
             ---
 
