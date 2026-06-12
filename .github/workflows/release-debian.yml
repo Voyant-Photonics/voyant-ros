@@ -435,6 +435,8 @@ jobs:
 
             📋 See the [voyant-sdk `${{ needs.config.outputs.sdk_version }}` release notes](https://github.com/Voyant-Photonics/voyant-sdk/releases/tag/${{ needs.config.outputs.sdk_version }}) for the full changelog.
 
+            ---
+
             Assets:
             - `ros-humble-voyant-ros_*.deb` (jammy / Ubuntu 22.04)
             - `ros-jazzy-voyant-ros_*.deb` (noble / Ubuntu 24.04)
