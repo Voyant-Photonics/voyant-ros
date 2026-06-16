@@ -9,15 +9,15 @@
     # These are the standard parameters for local testing in loopback mode
     # against a Carbon sensor:
     # - "0.0.0.0:5678": Local binding address and port (Carbon default)
-    # - "224.0.0.0": Multicast group address
+    # - "239.255.48.84": Multicast group address
     # - "192.168.1.100": Interface address (localhost/loopback)
     #
     # When connecting to an actual Carbon sensor
     #  - "0.0.0.0:5678": Binds to all interfaces on port 5678
-    #  - "224.0.0.0": Standard multicast group address for the sensor
+    #  - "239.255.48.84": Standard multicast group address for the sensor
     #  - "192.168.20.100": Your network interface's IP address
     binding_address: '0.0.0.0:5678'
-    multicast_group: '224.0.0.0'
+    multicast_group: '239.255.48.84'
     interface_address: '192.168.1.100'
 
     ## Shared parameters
