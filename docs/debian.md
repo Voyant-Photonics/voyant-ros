@@ -165,7 +165,7 @@ Run the Carbon simulator in terminal 2:
 
 ```bash
 docker exec -it voyant_ros_container bash
-voyant_carbon_simulator --bind-addr 127.0.0.1:0 --group-addr 224.0.0.0:5678
+voyant_carbon_simulator --bind-addr 127.0.0.1:0 --group-addr 239.255.48.84:5678
 ```
 
 > NOTE: `voyant_points_mock_stream` from prior releases produces the legacy

@@ -6,18 +6,15 @@
 /**:
   ros__parameters:
     ## Live node parameters
-    # These are the standard parameters for local testing in loopback mode
-    # against a Carbon sensor:
+    # Defaults target a Carbon sensor on a local network:
     # - "0.0.0.0:5678": Local binding address and port (Carbon default)
-    # - "224.0.0.0": Multicast group address
-    # - "192.168.1.100": Interface address (localhost/loopback)
+    # - "239.255.48.84": Multicast group address (must match the sensor's push destination)
+    # - "192.168.1.100": Host network interface IP on the sensor's subnet
     #
-    # When connecting to an actual Carbon sensor
-    #  - "0.0.0.0:5678": Binds to all interfaces on port 5678
-    #  - "224.0.0.0": Standard multicast group address for the sensor
-    #  - "192.168.20.100": Your network interface's IP address
+    # For loopback testing against the Carbon simulator, set interface_address
+    # to "127.0.0.1".
     binding_address: '0.0.0.0:5678'
-    multicast_group: '224.0.0.0'
+    multicast_group: '239.255.48.84'
     interface_address: '192.168.1.100'
 
     ## Shared parameters

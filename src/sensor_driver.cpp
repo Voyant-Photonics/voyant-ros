@@ -45,7 +45,7 @@ VoyantSensorDriver::~VoyantSensorDriver()
 void VoyantSensorDriver::getParams()
 {
   this->declare_parameter<std::string>("binding_address", "0.0.0.0:5678");
-  this->declare_parameter<std::string>("multicast_group", "224.0.0.0");
+  this->declare_parameter<std::string>("multicast_group", "239.255.48.84");
   this->declare_parameter<std::string>("interface_address", "192.168.1.100");
   this->declare_parameter<bool>("valid_only_filter", false);
   this->declare_parameter<int>("timestamp_mode", 0); // Default to TIME_FROM_SENSOR (0)
