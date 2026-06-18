@@ -42,11 +42,31 @@ VoyantSensorDriver::~VoyantSensorDriver()
   rclcpp::shutdown();
 }
 
+namespace
+{
+/// Map the `stream_transport` parameter string to the SDK enum. Unknown values fall back to
+/// unicast (the default, in which the sensor replies only to this client) with a warning.
+StreamTransport parseStreamTransport(const std::string &value, const rclcpp::Logger &logger)
+{
+  if(value == "multicast")
+  {
+    return StreamTransport::Multicast;
+  }
+  if(value != "unicast")
+  {
+    RCLCPP_WARN(logger, "[!] Unknown stream_transport '%s'; falling back to unicast", value.c_str());
+  }
+  return StreamTransport::Unicast;
+}
+} // namespace
+
 void VoyantSensorDriver::getParams()
 {
   this->declare_parameter<std::string>("binding_address", "0.0.0.0:5678");
   this->declare_parameter<std::string>("multicast_group", "239.255.48.84");
   this->declare_parameter<std::string>("interface_address", "192.168.1.100");
+  this->declare_parameter<std::string>("stream_transport", "unicast");
+  this->declare_parameter<bool>("observer_only", false);
   this->declare_parameter<bool>("valid_only_filter", false);
   this->declare_parameter<int>("timestamp_mode", 0); // Default to TIME_FROM_SENSOR (0)
   this->declare_parameter<std::string>("frame_id", "lidar_sensor");
@@ -55,6 +75,8 @@ void VoyantSensorDriver::getParams()
   config_.binding_address = this->get_parameter("binding_address").as_string();
   config_.multicast_group = this->get_parameter("multicast_group").as_string();
   config_.interface_address = this->get_parameter("interface_address").as_string();
+  config_.stream_transport = this->get_parameter("stream_transport").as_string();
+  config_.observer_only = this->get_parameter("observer_only").as_bool();
   config_.valid_only_filter = this->get_parameter("valid_only_filter").as_bool();
   config_.timestamp_mode = this->get_parameter("timestamp_mode").as_int();
   config_.lidar_frame_id = this->get_parameter("frame_id").as_string();
@@ -78,6 +100,8 @@ void VoyantSensorDriver::initialize()
     carbon_cfg.setBindAddr(config_.binding_address)
         .setGroupAddr(config_.multicast_group)
         .setInterfaceAddr(config_.interface_address)
+        .setStreamTransport(parseStreamTransport(config_.stream_transport, get_logger()))
+        .setObserverOnly(config_.observer_only)
         .setKeepInvalidPoints(!config_.valid_only_filter);
 
     client_ = std::make_shared<CarbonClient>(carbon_cfg);

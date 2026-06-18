@@ -230,7 +230,7 @@ docker run -it --network=host voyant_ros2_container
 > 1. Bring up the sensor following the sensor bring-up steps in the guide.
 > 2. Open the Voyant visualizer and confirm you see a live pointcloud
 >    from the sensor.
-> 3. Close the visualizer (it must release the multicast socket before
+> 3. Close the visualizer (it must release the UDP socket before
 >    the ROS driver can bind to it).
 > 4. Build and run the ROS node using the steps below.
 
