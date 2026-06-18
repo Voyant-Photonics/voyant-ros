@@ -38,6 +38,8 @@ struct SensorParams
   std::string binding_address;
   std::string multicast_group;
   std::string interface_address;
+  std::string stream_transport;
+  bool observer_only = false;
   PointFormat point_format = PointFormat::UNKNOWN;
 };
 

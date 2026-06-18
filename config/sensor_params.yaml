@@ -8,7 +8,7 @@
     ## Live node parameters
     # Defaults target a Carbon sensor on a local network:
     # - "0.0.0.0:5678": Local binding address and port (Carbon default)
-    # - "239.255.48.84": Multicast group address (must match the sensor's push destination)
+    # - "239.255.48.84": Multicast group the receiver joins (the sensor replies via unicast by default)
     # - "192.168.1.100": Host network interface IP on the sensor's subnet
     #
     # For loopback testing against the Carbon simulator, set interface_address
@@ -16,6 +16,14 @@
     binding_address: '0.0.0.0:5678'
     multicast_group: '239.255.48.84'
     interface_address: '192.168.1.100'
+    # How the sensor delivers its push stream:
+    # - "unicast" (default): the sensor replies only to this client; robust even on a multi-homed host
+    # - "multicast": the sensor streams to the group above so other clients can share the sensor
+    stream_transport: 'unicast'
+    # Observer-only mode: passively receive the stream without driving the sensor (no SDL, time-sync,
+    # or comms-health). Set true when another (primary) client already owns the sensor; that primary
+    # must use "multicast" so this node can receive the shared stream. Exactly one primary per sensor.
+    observer_only: false
 
     ## Shared parameters
     # Point format selection
