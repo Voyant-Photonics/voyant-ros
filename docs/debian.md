@@ -97,7 +97,7 @@ ros2 launch foxglove_bridge foxglove_bridge_launch.xml
 
 ### Test package in a clean docker container
 
-Start from a directory that has:
+Start from a directory that has the latest releases, e.g.,:
 
 ```bash
 $ ls debs/
