@@ -56,7 +56,7 @@ private:
    * @param frame The Voyant frame
    * @return sensor_msgs::msg::PointCloud2 The ROS2 point cloud message
    */
-  sensor_msgs::msg::PointCloud2 pointDatatoRosMsg(VoyantFrameWrapper &frame);
+  sensor_msgs::msg::PointCloud2 pointDatatoRosMsg(const VoyantFrame &frame);
 
   // ROS components
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr points_pub;

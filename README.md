@@ -3,16 +3,16 @@
 [![CI](https://github.com/Voyant-Photonics/voyant-ros/actions/workflows/docker-image.yml/badge.svg?branch=main)](https://github.com/Voyant-Photonics/voyant-ros/actions/workflows/docker-image.yml)
 ![ROS 2](https://img.shields.io/badge/ROS%202-Humble%20%7C%20Jazzy%20%7C%20Kilted%20%7C%20Lyrical-blue)
 ![Ubuntu](https://img.shields.io/badge/Ubuntu-22.04%20%7C%2024.04%20%7C%2026.04-orange)
-![voyant-api](https://img.shields.io/badge/voyant--api-%E2%89%A5%200.9.2-green)
+![voyant-api](https://img.shields.io/badge/voyant--api-%E2%89%A5%201.0.0-green)
 [![License](https://img.shields.io/github/license/Voyant-Photonics/voyant-ros)](LICENSE)
 [![Latest release](https://img.shields.io/github/v/release/Voyant-Photonics/voyant-ros)](https://github.com/Voyant-Photonics/voyant-ros/releases)
 
 This ROS2 package provides support for Voyant sensors.
 Configure the sensor (client) address using the `config/sensor_params.yaml` file.
-It requires [`voyant-api`](https://github.com/Voyant-Photonics/voyant-sdk) **≥ 0.9.2**
-(the Carbon baseline). Pre-built releases bundle the version-matched `voyant-api`
-packages, so you only install `voyant-api` yourself when building from source —
-any release ≥ 0.9.2 works there.
+It requires [`voyant-api`](https://github.com/Voyant-Photonics/voyant-sdk) **≥ 1.0.0**.
+Pre-built releases bundle the version-matched `voyant-api` packages, so you only
+install `voyant-api` yourself when building from source — any release ≥ 1.0.0
+works there.
 Pre-built Debian packages are published for `ROS2 Humble` (Ubuntu 22.04),
 `ROS2 Jazzy` (Ubuntu 24.04), `ROS2 Kilted` (Ubuntu 24.04), and `ROS2 Lyrical`
 (Ubuntu 26.04). Building from source is also supported.
@@ -56,22 +56,7 @@ Follow the official installation guide for your platform:
 (Ubuntu 24.04), or [ROS2 Lyrical](https://docs.ros.org/en/lyrical/Installation/Ubuntu-Install-Debs.html)
 (Ubuntu 26.04).
 
-#### 2. Install Cap'n Proto
-
-Cap'n Proto is a required runtime dependency that must be built from source. Follow the **Installation: Unix** > **From Release Tarball** instructions at [capnproto.org/install.html](https://capnproto.org/install.html). At the time of writing:
-
-```bash
-curl -O https://capnproto.org/capnproto-c++-1.1.0.tar.gz
-tar zxf capnproto-c++-1.1.0.tar.gz
-cd capnproto-c++-1.1.0
-./configure
-make -j6 check
-sudo make install
-sudo ldconfig
-cd ..
-```
-
-#### 3. Download and install packages
+#### 2. Download and install packages
 
 Download the following `.deb` files from the [latest voyant-ros release](https://github.com/Voyant-Photonics/voyant-ros/releases/latest) (the `voyant-api` packages are bundled here alongside the ROS2 package, version-matched):
 
@@ -89,7 +74,7 @@ sudo apt install -y ./voyant-api*.deb
 sudo apt install -y ./ros-${ROS_DISTRO}-voyant-ros*.deb
 ```
 
-#### 4. [Optional] Install visualization tools
+#### 3. [Optional] Install visualization tools
 
 - Install Foxglove Studio from the [official website](https://foxglove.dev/download/), or use [Foxglove Web](https://app.foxglove.dev/) at `ws://localhost:8765`
 - Install the ROS2-Foxglove bridge:
@@ -126,24 +111,7 @@ Follow the official installation guide for your distro (see
 [ROS2 Jazzy installation guide](https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html).
 
 <!-- markdownlint-disable-next-line MD024 -->
-#### 2. Install Cap'n Proto
-
-Cap'n Proto is a required runtime dependency that must be built from source.
-Follow the **Installation: Unix** > **From Release Tarball** instructions at [capnproto.org/install.html](https://capnproto.org/install.html).
-At the time of writing:
-
-```bash
-curl -O https://capnproto.org/capnproto-c++-1.1.0.tar.gz
-tar zxf capnproto-c++-1.1.0.tar.gz
-cd capnproto-c++-1.1.0
-./configure
-make -j6 check
-sudo make install
-sudo ldconfig
-cd ..
-```
-
-#### 3. Install Voyant API
+#### 2. Install Voyant API
 
 Download `voyant-api_*_amd64.deb` and `voyant-api-dev_*_amd64.deb` from the [latest voyant-sdk release](https://github.com/Voyant-Photonics/voyant-sdk/releases/latest) and install them:
 
@@ -154,13 +122,13 @@ sudo apt install -y ./voyant-api_*amd64.deb \
                     ./voyant-api-dev_*amd64.deb
 ```
 
-#### 4. Install ROS dependencies
+#### 3. Install ROS dependencies
 
 ```bash
 sudo apt install ros-${ROS_DISTRO}-pcl-ros ros-${ROS_DISTRO}-rviz2
 ```
 
-#### 5. Clone and build
+#### 4. Clone and build
 
 ```bash
 mkdir -p ~/ros2_ws/src && cd ~/ros2_ws/src
@@ -171,7 +139,7 @@ colcon build --symlink-install --packages-select voyant_ros
 ```
 
 > **Note**
-> You can also install ROS dependencies via rosdep instead of step 4 (run from workspace root after cloning):
+> You can also install ROS dependencies via rosdep instead of step 3 (run from workspace root after cloning):
 >
 > ```bash
 > rosdep install --from-paths src --ignore-src -r -y
@@ -179,7 +147,7 @@ colcon build --symlink-install --packages-select voyant_ros
 >
 > The pointcloud can also be visualized using RViz — set the `use_rviz` launch argument to `true`.
 
-#### 6. [Optional] Install visualization tools
+#### 5. [Optional] Install visualization tools
 
 - Install Foxglove Studio from the [official website](https://foxglove.dev/download/), or use [Foxglove Web](https://app.foxglove.dev/) at `ws://localhost:8765`
 - Install the ROS2-Foxglove bridge:
@@ -221,7 +189,7 @@ docker run -it --network=host voyant_ros2_container
 
 ## Running the package
 
-> 🚧 **Temporary fix: when using `voyant-api` 0.9.2 or later (Carbon sensor)**
+> 🚧 **Temporary fix (Carbon sensor)**
 >
 > The Carbon client requires the sensor to be brought up via Voyant Visualizer
 > before the ROS node can connect. Until this is integrated into
@@ -260,9 +228,12 @@ or with RViz visualization
 ros2 launch voyant_ros sensor_launch.py use_rviz:=true # for rviz
 ```
 
-## Converting `.bin` files to ROS2 bag format
+## Converting `.vynt` recordings to ROS2 bag format
 
-The configurations for ROS2 bag can be found in `config/sensor_params.yaml` file. There are two ways you can run use the conversion tool.
+The configurations for ROS2 bag can be found in the `config/sensor_params.yaml` file. There are two ways you can run the conversion tool.
+
+> Recordings made with a pre-1.0.0 `voyant-api` must first be converted to the
+> `.vynt` format with the `voyant_recording_migrate` tool from the SDK.
 
 ### 1. Using the binaries from `colcon build`
 
@@ -291,12 +262,13 @@ make
 ./bin/voyant_bin_to_mcap ../config/sensor_params.yaml # path to your params yaml file
 ```
 
-## Converting mcap files to bin format
+## Converting mcap files to `.vynt` format
 
 You can only convert MCAP files with the correct data.
 
-> At time of writing, that means you will need to record the `/device_metadata` field and
-> to use `point_format: 2 # MDL_EXTENDED` when recording.
+> At time of writing, that means you will need to record the `/device_metadata` topic and
+> to use `point_format: 2 # EXTENDED` when recording. The rebuilt recording keeps the
+> point data and frame timeline, but not the original device identity or sensor state.
 
 **Build the tool:**
 
@@ -310,7 +282,7 @@ source install/setup.bash
 ```
 
 Edit `config/mcap_to_bin_params.yaml` to set `mcap_input` and `bin_output`
-(both are empty by default).
+(both are empty by default; `bin_output` must end in `.vynt`).
 
 **Run the tool** (from the workspace root, `~/ros2_ws`):
 
@@ -325,7 +297,7 @@ It will also open the Foxglove GUI for visualization.
 
 1. Click on `Open connection...` in the Foxglove GUI on the left panel.
 2. Connect Foxglove to the default Foxglove websocket server at `ws://localhost:8765`
-3. In the top right corner of the Foxglove GUI title bar, click on the `Layout` button and import the configuration file from `config/voyant_ros_foxglove_cfg.json`
+3. In the top right corner of the Foxglove GUI title bar, click on the `Layout` button and import the configuration file from `config/voyant_foxglove_cfg.json`
 
 This will load a layout with pointcloud data visualization, offering three different color maps.
 For more information on the colormap options, refer to the [Foxglove Colormap Documentation](https://voyant-photonics.github.io/foxglove/).

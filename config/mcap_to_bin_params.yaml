@@ -3,7 +3,7 @@
 # This example code is licensed under the MIT License.
 # See the LICENSE file in the repository root for full license text.
 
-# These parameters are used in the MCAP -> voyant .bin conversion
+# These parameters are used in the MCAP -> voyant .vynt conversion
 
 mcap_input: '' # Path to your input file
-bin_output: '' # Desired output path
+bin_output: '' # Desired output path (must end in .vynt)

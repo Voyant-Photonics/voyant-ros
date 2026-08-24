@@ -23,8 +23,9 @@ int main(int argc, char *argv[])
   // Initialize LiDAR converter
   voyant_ros::Bin2Mcap converter(yaml_file_path);
 
-  // Create the playback instance
-  VoyantPlayback player;
+  // Create the playback instance: rate 0 converts as fast as possible;
+  // diagnostic_mode keeps any invalid returns the recording holds.
+  VoyantPlayback player(0.0, false, converter.config.diagnostic_mode);
   if(!player.isValid())
   {
     std::cerr << "Failed to create VoyantPlayback instance: " << player.getLastError() << std::endl;
@@ -74,7 +75,7 @@ int main(int argc, char *argv[])
     uint64_t timestamp = player.currentFrameTimestamp();
 
     // Access latest frame as a const reference
-    const VoyantFrameWrapper &frame = player.currentFrame();
+    const VoyantFrame &frame = player.currentFrame();
     sensor_msgs::msg::PointCloud2 cloud = converter.pointDatatoRosMsg(frame);
     std::cout << "Pointcloud Size: " << cloud.height * cloud.width << std::endl;
 

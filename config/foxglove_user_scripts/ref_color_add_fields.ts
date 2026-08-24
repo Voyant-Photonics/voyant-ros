@@ -158,6 +158,7 @@ export default function script(
         row_step: number;
         point_step: number;
         data: Uint8Array;
+        fields: { name: string; offset: number }[];
         header: {
             stamp: {
                 sec: number;
@@ -194,12 +195,19 @@ export default function script(
         const {
             data,
             point_step: originalStride,
+            fields,
             header: ros_header,
         } = event.message;
+
+        // Only the extended point format carries calibrated_reflectance
+        const refField = fields.find(
+            (f) => f.name === "calibrated_reflectance",
+        );
 
         return processROS2PointCloud(
             data,
             originalStride,
+            refField ? refField.offset : undefined,
             ros_header,
             globalVars,
         );
@@ -346,6 +354,7 @@ function createXYZRGBAPointCloud(
 function processROS2PointCloud(
     data: Uint8Array,
     originalStride: number,
+    refOffset: number | undefined,
     ros_header: {
         stamp: {
             sec: number;
@@ -356,25 +365,19 @@ function processROS2PointCloud(
     globalVars: GlobalVariables,
 ) {
     const XYZ_OFFSET = 0;
-    const REF_OFFSET = 36;
-    const VOYANT_POINT_STRIDE = 48; // Standard VoyantPoint without reflectance
     const numPoints = data.length / originalStride;
-
-    // Check if this is the extended format with reflectance
-    // Only VoyantPointMdlExtended (stride > 48) has reflectance data
-    const hasReflectance = originalStride > VOYANT_POINT_STRIDE;
 
     let xyz: Float32Array;
     let rgbColors: number[][];
 
-    if (hasReflectance) {
+    if (refOffset !== undefined) {
         // Extract XYZ and reflectance values
         const result = extractXYZAndReflectance(
             data,
             originalStride,
             numPoints,
             XYZ_OFFSET,
-            REF_OFFSET,
+            refOffset,
         );
         xyz = result.xyz;
 

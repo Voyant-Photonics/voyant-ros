@@ -8,8 +8,10 @@
 #include "voyant_ros/msg/voyant_device_metadata.hpp"
 #include "voyant_ros/point_types.hpp"
 #include "voyant_ros/sensor_params.hpp"
+#include <cmath>
+#include <limits>
 #include <rclcpp/rclcpp.hpp>
-#include <voyant_frame_wrapper.hpp>
+#include <voyant_frame.hpp>
 
 namespace voyant_ros
 {
@@ -19,81 +21,80 @@ namespace voyant_ros
  * Base template - specialized for each point type
  */
 template <typename PointT>
-inline void fillPointFromFrame(PointT &point, const PointDataWrapper &p, const VoyantFrameWrapper &frame)
+inline void fillPointFromFrame(PointT &point,
+                               const PointData &p,
+                               const VoyantVec3 &xyz,
+                               const VoyantFrame &frame)
 {
   // This should never be called - specializations handle all cases
   static_assert(sizeof(PointT) == 0, "Unsupported point type - please provide a specialization");
 }
 
 /**
- * @brief Specialization for Standard MDL VoyantPoint
+ * @brief Specialization for the standard VoyantPoint
  */
 template <>
 inline void fillPointFromFrame<VoyantPoint>(VoyantPoint &point,
-                                            const PointDataWrapper &p,
-                                            const VoyantFrameWrapper & // unused
+                                            const PointData &p,
+                                            const VoyantVec3 &xyz,
+                                            const VoyantFrame & // unused
 )
 {
-  point.x = p.x();
-  point.y = p.y();
-  point.z = p.z();
-  point.v = p.radial_vel();
-  point.snr = p.snr_linear();
-  point.drop_reason = static_cast<uint8_t>(p.drop_reason());
-  point.timestamp_nsecs = p.timestamp_nanosecs();
-  point.point_idx = p.point_index();
+  point.x = xyz.x;
+  point.y = xyz.y;
+  point.z = xyz.z;
+  point.v = p.doppler_mps;
+  point.snr = p.snr;
+  point.drop_reason = p.drop_reason;
+  point.timestamp_nsecs = p.timestamp_nanosecs;
+  point.point_idx = (static_cast<uint32_t>(p.azimuth_idx) << 16) | p.elevation_idx;
 }
 
 /**
- * @brief Specialization for VoyantPointMdlExtended
+ * @brief Specialization for VoyantPointExtended
  */
 template <>
-inline void fillPointFromFrame<VoyantPointMdlExtended>(VoyantPointMdlExtended &point,
-                                                       const PointDataWrapper &p,
-                                                       const VoyantFrameWrapper &frame)
+inline void fillPointFromFrame<VoyantPointExtended>(VoyantPointExtended &point,
+                                                    const PointData &p,
+                                                    const VoyantVec3 &xyz,
+                                                    const VoyantFrame &frame)
 {
   // Fill all base fields
-  point.x = p.x();
-  point.y = p.y();
-  point.z = p.z();
-  point.v = p.radial_vel();
-  point.snr = p.snr_linear();
-  point.drop_reason = static_cast<uint8_t>(p.drop_reason());
-  point.timestamp_nsecs = p.timestamp_nanosecs();
-  point.point_idx = p.point_index();
-  point.calibrated_reflectance = p.calibrated_reflectance();
-  point.noise_mean_estimate = p.noise_mean_estimate();
-  point.min_ramp_snr = p.min_ramp_snr();
-  point.frame_index = frame.header().frameIndex();
+  point.x = xyz.x;
+  point.y = xyz.y;
+  point.z = xyz.z;
+  point.v = p.doppler_mps;
+  point.snr = p.snr;
+  point.drop_reason = p.drop_reason;
+  point.timestamp_nsecs = p.timestamp_nanosecs;
+  point.point_idx = (static_cast<uint32_t>(p.azimuth_idx) << 16) | p.elevation_idx;
+  point.calibrated_reflectance = p.calibrated_reflectance;
+  point.frame_index = frame.frameIndex();
 }
 
 /**
  * @brief Generic frame to PointCloud2 converter
+ *
+ * Frames contain invalid returns only when the source keeps them (client
+ * diagnostic mode / playback keep_invalid_points), so every point is published.
+ * Per-point timestamps are offsets from the frame stamp in the cloud header.
  */
-template <typename PointT, typename FrameT, typename ConfigT>
-sensor_msgs::msg::PointCloud2 convertFrameToPointCloud2(const FrameT &frame, const ConfigT &config)
+template <typename PointT, typename ConfigT>
+sensor_msgs::msg::PointCloud2 convertFrameToPointCloud2(const VoyantFrame &frame, const ConfigT &config)
 {
-  pcl::PointCloud<PointT> pcl_cloud;
-  const auto &points = frame.points();
-  size_t point_count = points.size();
+  const std::vector<PointData> &points = frame.points();
+  const std::vector<VoyantVec3> xyz = frame.xyz(); // index-aligned with points()
 
-  pcl_cloud.resize(point_count);
-  pcl_cloud.width = point_count;
+  pcl::PointCloud<PointT> pcl_cloud;
+  pcl_cloud.resize(points.size());
+  pcl_cloud.width = points.size();
   pcl_cloud.height = 1;
   pcl_cloud.is_dense = false;
 
-  size_t index = 0;
-  for(const auto &p : points)
+  for(size_t i = 0; i < points.size(); i++)
   {
-    if(config.valid_only_filter && p.drop_reason() != DropReason::SUCCESS)
-    {
-      continue;
-    }
-
-    PointT &point = pcl_cloud.points[index++];
-    fillPointFromFrame(point, p, frame); // Use fillPointFromFrame for PointT's type
+    fillPointFromFrame(pcl_cloud.points[i], points[i], xyz[i], frame);
   }
-  pcl_cloud.resize(index);
 
   sensor_msgs::msg::PointCloud2 ros_cloud;
   pcl::toROSMsg(pcl_cloud, ros_cloud);
@@ -101,8 +102,8 @@ sensor_msgs::msg::PointCloud2 convertFrameToPointCloud2(const FrameT &frame, con
   switch(static_cast<TimestampMode>(config.timestamp_mode))
   {
     case TimestampMode::TIME_FROM_SENSOR:
-      ros_cloud.header.stamp.sec = frame.header().timestampSeconds();
-      ros_cloud.header.stamp.nanosec = frame.header().timestampNanoseconds();
+      ros_cloud.header.stamp.sec = static_cast<int32_t>(frame.timestampSeconds());
+      ros_cloud.header.stamp.nanosec = static_cast<uint32_t>(frame.timestampNanoseconds());
       break;
 
     case TimestampMode::TIME_FROM_ROS:
@@ -122,16 +123,16 @@ sensor_msgs::msg::PointCloud2 convertFrameToPointCloud2(const FrameT &frame, con
  * @brief Factory function to convert frame based on configured point format
  * This allows runtime selection of point format
  */
-inline sensor_msgs::msg::PointCloud2 convertFrameByFormat(const VoyantFrameWrapper &frame,
+inline sensor_msgs::msg::PointCloud2 convertFrameByFormat(const VoyantFrame &frame,
                                                           const SensorParams &config)
 {
   switch(config.point_format)
   {
-    case PointFormat::MDL_STANDARD:
+    case PointFormat::STANDARD:
       return convertFrameToPointCloud2<VoyantPoint>(frame, config);
 
-    case PointFormat::MDL_EXTENDED:
-      return convertFrameToPointCloud2<VoyantPointMdlExtended>(frame, config);
+    case PointFormat::EXTENDED:
+      return convertFrameToPointCloud2<VoyantPointExtended>(frame, config);
 
     case PointFormat::UNKNOWN:
       throw std::runtime_error("Point format not specified");
@@ -142,86 +143,94 @@ inline sensor_msgs::msg::PointCloud2 convertFrameByFormat(const VoyantFrameWrapp
 }
 
 /**
- * @brief Convert PointCloud2 back to VoyantFrameWrapper
- * Template specialization for VoyantPointMdlExtended only
+ * @brief Convert PointCloud2 back to a recordable VoyantFrame
+ * Template specialization for VoyantPointExtended only
  * Expect other formats to be supported in the future
+ *
+ * The rebuilt frame is a synthetic frame: it keeps the cloud's timeline
+ * (timestamps and frame index) but cannot claim the original device identity,
+ * and carries no sensor state. combine_method and user_data are not carried
+ * through the point cloud, so they are zeroed.
  */
 template <typename PointT>
-VoyantFrameWrapper convertPointCloud2ToFrame(const sensor_msgs::msg::PointCloud2 &cloud,
-                                             const voyant_ros::msg::VoyantDeviceMetadata &metadata)
+VoyantFrame convertPointCloud2ToFrame(const sensor_msgs::msg::PointCloud2 &cloud,
+                                      const voyant_ros::msg::VoyantDeviceMetadata &metadata)
 {
   static_assert(
-      std::is_same_v<PointT, VoyantPointMdlExtended>,
-      "Only VoyantPointMdlExtended is currently supported for PointCloud2 to frame conversion");
+      std::is_same_v<PointT, VoyantPointExtended>,
+      "Only VoyantPointExtended is currently supported for PointCloud2 to frame conversion");
 
   // Convert ROS PointCloud2 to PCL
   pcl::PointCloud<PointT> pcl_cloud;
   pcl::fromROSMsg(cloud, pcl_cloud);
 
-  VoyantFrameWrapper frame;
-
-  // Setup header from metadata and cloud header
-  VoyantHeaderWrapper &header = frame.headerMut();
-  header.setMessageType(MessageType::VOYANT_FRAME);
-  header.setTimestampSeconds(cloud.header.stamp.sec);
-  header.setTimestampNanoseconds(cloud.header.stamp.nanosec);
+  uint32_t frame_index = 0;
   if(!pcl_cloud.empty())
   {
     // We will confirm that all points have the same frame index
-    header.setFrameIndex(pcl_cloud.points[0].frame_index);
+    frame_index = pcl_cloud.points[0].frame_index;
   }
   else
   {
     std::cerr << "Attempting conversion of empty PointCloud2 into VoyantFrame" << std::endl;
   }
-  header.setDeviceClass(deviceClassFromDeviceId(metadata.device_id));
-  header.setDeviceNumber(deviceNumberFromDeviceId(metadata.device_id));
-  header.protoVersionMut() = VoyantVersionWrapper::fromU32Hash(metadata.proto_version_hash);
-  header.apiVersionMut() = VoyantVersionWrapper::fromU32Hash(metadata.api_version_hash);
-  header.firmwareVersionMut() = VoyantVersionWrapper::fromU32Hash(metadata.firmware_version_hash);
-  header.hdlVersionMut() = VoyantVersionWrapper::fromU32Hash(metadata.hdl_version_hash);
 
-  // Convert points
-  std::vector<PointDataWrapper> &points = frame.pointsMut();
+  std::vector<PointData> points;
   points.reserve(pcl_cloud.size());
 
   for(const auto &pcl_point : pcl_cloud.points)
   {
-    if(pcl_point.frame_index != header.frameIndex())
+    if(pcl_point.frame_index != frame_index)
     {
-      std::cerr << "Warning: Skipping point with inconsistent frame_index. Expected: "
-                << header.frameIndex() << ", Found: " << pcl_point.frame_index << std::endl;
+      std::cerr << "Warning: Skipping point with inconsistent frame_index. Expected: " << frame_index
+                << ", Found: " << pcl_point.frame_index << std::endl;
       continue;
     }
 
-    // Fill point data from PCL point
-    PointDataWrapper point_wrapper;
-    point_wrapper.set_x(pcl_point.x);
-    point_wrapper.set_y(pcl_point.y);
-    point_wrapper.set_z(pcl_point.z);
-    point_wrapper.set_radial_vel(pcl_point.v);
-    point_wrapper.set_snr_linear(pcl_point.snr);
-    point_wrapper.set_drop_reason(static_cast<DropReason>(pcl_point.drop_reason));
-    point_wrapper.set_timestamp_nanosecs(pcl_point.timestamp_nsecs);
-    point_wrapper.set_point_index(pcl_point.point_idx);
-    point_wrapper.set_calibrated_reflectance(pcl_point.calibrated_reflectance);
-    point_wrapper.set_noise_mean_estimate(pcl_point.noise_mean_estimate);
-    point_wrapper.set_min_ramp_snr(pcl_point.min_ramp_snr);
+    PointData p{};
+    // Invert the sensor-frame projection (+x forward, +y left, +z up) back to the
+    // stored spherical fields; a zero-length position stays at range 0.
+    const float range =
+        std::sqrt(pcl_point.x * pcl_point.x + pcl_point.y * pcl_point.y + pcl_point.z * pcl_point.z);
+    if(range > std::numeric_limits<float>::epsilon())
+    {
+      p.range_m = range;
+      p.azimuth_rad = std::atan2(pcl_point.y, pcl_point.x);
+      p.elevation_rad = std::asin(pcl_point.z / range);
+    }
+    p.doppler_mps = pcl_point.v;
+    p.snr = pcl_point.snr;
+    p.calibrated_reflectance = pcl_point.calibrated_reflectance;
+    p.timestamp_nanosecs = pcl_point.timestamp_nsecs;
+    p.azimuth_idx = static_cast<uint16_t>(pcl_point.point_idx >> 16);
+    p.elevation_idx = static_cast<uint16_t>(pcl_point.point_idx & 0xFFFF);
+    p.drop_reason = pcl_point.drop_reason;
 
-    points.push_back(std::move(point_wrapper));
+    points.push_back(p);
   }
 
-  return frame;
+  VoyantFrame::SyntheticFrameDesc desc;
+  desc.timestampSeconds = cloud.header.stamp.sec;
+  desc.timestampNanoseconds = static_cast<int32_t>(cloud.header.stamp.nanosec);
+  desc.frameIndex = frame_index;
+
+  std::optional<VoyantFrame> frame = VoyantFrame::synthetic(std::move(points), desc);
+  if(!frame)
+  {
+    throw std::runtime_error(
+        "Failed to rebuild a frame from PointCloud2 (device: " + metadata.device_id + ")");
+  }
+  return std::move(*frame);
 }
 
 /**
  * @brief Convenience function with explicit template instantiation
  */
-inline VoyantFrameWrapper convertMdlExtendedPointCloud2ToFrame(
+inline VoyantFrame convertExtendedPointCloud2ToFrame(
     const sensor_msgs::msg::PointCloud2 &cloud,
     const voyant_ros::msg::VoyantDeviceMetadata &metadata)
 {
-  return convertPointCloud2ToFrame<VoyantPointMdlExtended>(cloud, metadata);
+  return convertPointCloud2ToFrame<VoyantPointExtended>(cloud, metadata);
 }
 
 } // namespace voyant_ros

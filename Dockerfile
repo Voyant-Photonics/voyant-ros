@@ -40,18 +40,6 @@ RUN if [ "$RMW_IMPLEMENTATION_ARG" = "rmw_cyclonedds_cpp" ]; then \
     rm -rf /var/lib/apt/lists/*; \
     fi
 
-# Install Cap'n Proto from source used by Voyant API
-WORKDIR /tmp
-RUN curl -O https://capnproto.org/capnproto-c++-1.1.0.tar.gz && \
-    tar zxf capnproto-c++-1.1.0.tar.gz && \
-    cd capnproto-c++-1.1.0 && \
-    ./configure && \
-    make -j6 && \
-    make install && \
-    ldconfig && \
-    cd .. && \
-    rm -rf capnproto-c++-1.1.0*
-
 # Set working directory
 WORKDIR /workspace
 

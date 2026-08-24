@@ -28,8 +28,8 @@
     ## Shared parameters
     # Point format selection
     # - 0 = UNKNOWN (will throw error)
-    # - 1 = MDL_STANDARD (recommended) - x,y,z,v,snr,drop_reason,timestamp,index
-    # - 2 = MDL_EXTENDED - adds calibrated_reflectance, noise_mean_estimate, min_ramp_snr, frame_index
+    # - 1 = STANDARD (recommended) - x,y,z,v,snr,drop_reason,timestamp,packed point index
+    # - 2 = EXTENDED - adds calibrated_reflectance, frame_index
     point_format: 1
 
     # timestamp_mode[optional]
@@ -37,12 +37,13 @@
     # - 1 = TIME_FROM_ROS
     timestamp_mode: 0
 
-    # Enable Single Point Noise filter (+ other filtering of invalid points)
-    valid_only_filter: true
+    # Include invalid returns (with their drop_reason) instead of valid points only.
+    # Live: runs the client in diagnostic mode; conversion: keeps a recording's invalid points.
+    diagnostic_mode: false
 
     ## The below params are shared with the bin_to_mcap conversion
     frame_id: 'voyant_sensor'
-    bin_input: '' # Path to your bin file
+    bin_input: '' # Path to your .vynt recording
     mcap_output: '' # Desired output path
     storage_id: 'mcap' # sqlite3/mcap
     serialization_format: 'cdr'

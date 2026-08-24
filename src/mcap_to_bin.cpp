@@ -185,10 +185,10 @@ bool McapPlayback::processFrames()
         rclcpp::SerializedMessage serialized_msg(*bag_message->serialized_data);
         pc_serializer.deserialize_message(&serialized_msg, &cloud);
 
-        // Convert PointCloud2 back to VoyantFrameWrapper amd record
+        // Convert PointCloud2 back to VoyantFrame and record
         try
         {
-          VoyantFrameWrapper frame = convertMdlExtendedPointCloud2ToFrame(cloud, metadata_);
+          VoyantFrame frame = convertExtendedPointCloud2ToFrame(cloud, metadata_);
 
           RecordResult result = recorder.recordFrame(frame);
           if(result == RecordResult::Error || result == RecordResult::Unknown)
@@ -202,7 +202,7 @@ bool McapPlayback::processFrames()
         catch(const std::exception &e)
         {
           std::cerr << "\nFailed to convert frame " << frame_count
-                    << " to VoyantFrameWrapper: " << e.what() << std::endl;
+                    << " to VoyantFrame: " << e.what() << std::endl;
           return false;
         }
 
@@ -243,8 +243,6 @@ bool McapPlayback::contains_valid_format(const sensor_msgs::msg::PointCloud2 &cl
                                            "timestamp_nsecs",
                                            "point_idx",
                                            "calibrated_reflectance",
-                                           "noise_mean_estimate",
-                                           "min_ramp_snr",
                                            "frame_index"};
 
   std::set<std::string> found_fields;
