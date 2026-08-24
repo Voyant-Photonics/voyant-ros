@@ -67,6 +67,8 @@ int main(int argc, char *argv[])
 
   writer->create_topic(topic_metadata);
 
+  bool wrote_device_metadata = false;
+
   // Read and process frames - timing and loopback is handled automatically
   while(player.nextFrame())
   {
@@ -78,6 +80,18 @@ int main(int argc, char *argv[])
     const VoyantFrame &frame = player.currentFrame();
     sensor_msgs::msg::PointCloud2 cloud = converter.pointDatatoRosMsg(frame);
     std::cout << "Pointcloud Size: " << cloud.height * cloud.width << std::endl;
+
+    // One-shot device metadata, mirroring the live driver's latched publish --
+    // mcap_to_bin requires it when converting back to a recording.
+    if(!wrote_device_metadata)
+    {
+      voyant_ros::msg::VoyantDeviceMetadata metadata;
+      metadata.header.stamp = cloud.header.stamp;
+      metadata.header.frame_id = converter.config.lidar_frame_id;
+      metadata.device_id = frame.deviceId();
+      writer->write(metadata, "/device_metadata", rclcpp::Time(cloud.header.stamp));
+      wrote_device_metadata = true;
+    }
 
     rclcpp::Serialization<sensor_msgs::msg::PointCloud2> serializer;
     rclcpp::SerializedMessage serialized_msg;

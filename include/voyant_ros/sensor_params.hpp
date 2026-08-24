@@ -15,13 +15,6 @@ enum class TimestampMode
   TIME_FROM_ROS = 1,
 };
 
-enum class PointFormat
-{
-  UNKNOWN = 0,
-  STANDARD = 1,
-  EXTENDED = 2,
-};
-
 /**
  * @brief Sensor configuration parameters
  */
@@ -40,27 +33,6 @@ struct SensorParams
   std::string interface_address;
   std::string stream_transport;
   bool observer_only = false;
-  PointFormat point_format = PointFormat::UNKNOWN;
 };
-
-/**
- * @brief Convert PointFormat enum to string representation
- * @param format The point format enum value
- * @return String representation of the format
- */
-inline std::string pointFormatToString(PointFormat format)
-{
-  switch(format)
-  {
-    case PointFormat::STANDARD:
-      return "STANDARD";
-    case PointFormat::EXTENDED:
-      return "EXTENDED";
-    case PointFormat::UNKNOWN:
-      return "UNKNOWN";
-    default:
-      return "INVALID(" + std::to_string(static_cast<int>(format)) + ")";
-  }
-}
 
 } // namespace voyant_ros

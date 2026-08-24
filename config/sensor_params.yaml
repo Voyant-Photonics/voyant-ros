@@ -26,12 +26,6 @@
     observer_only: false
 
     ## Shared parameters
-    # Point format selection
-    # - 0 = UNKNOWN (will throw error)
-    # - 1 = STANDARD (recommended) - x,y,z,v,snr,drop_reason,timestamp,packed point index
-    # - 2 = EXTENDED - adds calibrated_reflectance, frame_index
-    point_format: 1
-
     # timestamp_mode[optional]
     # - 0 = TIME_FROM_SENSOR
     # - 1 = TIME_FROM_ROS

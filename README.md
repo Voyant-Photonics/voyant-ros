@@ -189,6 +189,11 @@ docker run -it --network=host voyant_ros2_container
 
 ## Running the package
 
+**Upgrading from a pre-1.0.0 driver:** the `point_format` parameter was removed —
+every published cloud now carries the full field set. Delete the key from existing
+param files: unrecognized ROS parameters in a params file are silently ignored, so
+a stale `point_format` entry has no effect and only causes confusion.
+
 > 🚧 **Temporary fix (Carbon sensor)**
 >
 > The Carbon client requires the sensor to be brought up via Voyant Visualizer
@@ -266,9 +271,11 @@ make
 
 You can only convert MCAP files with the correct data.
 
-> At time of writing, that means you will need to record the `/device_metadata` topic and
-> to use `point_format: 2 # EXTENDED` when recording. The rebuilt recording keeps the
-> point data and frame timeline, but not the original device identity or sensor state.
+> The clouds must carry the full driver field set and the MCAP must contain the
+> `/device_metadata` topic. `voyant_bin_to_mcap` writes both automatically; a live
+> `ros2 bag record` capture must include that topic alongside the points.
+> The rebuilt recording keeps the point data and frame timeline, but not the
+> original device identity or sensor state.
 
 **Build the tool:**
 

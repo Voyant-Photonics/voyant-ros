@@ -199,7 +199,7 @@ export default function script(
             header: ros_header,
         } = event.message;
 
-        // Only the extended point format carries calibrated_reflectance
+        // Older recordings may lack calibrated_reflectance
         const refField = fields.find(
             (f) => f.name === "calibrated_reflectance",
         );

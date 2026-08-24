@@ -188,7 +188,7 @@ bool McapPlayback::processFrames()
         // Convert PointCloud2 back to VoyantFrame and record
         try
         {
-          VoyantFrame frame = convertExtendedPointCloud2ToFrame(cloud, metadata_);
+          VoyantFrame frame = convertPointCloud2ToFrame(cloud, metadata_);
 
           RecordResult result = recorder.recordFrame(frame);
           if(result == RecordResult::Error || result == RecordResult::Unknown)
