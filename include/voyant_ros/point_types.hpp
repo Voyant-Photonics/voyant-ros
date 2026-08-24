@@ -16,6 +16,10 @@ namespace voyant_ros
 /**
  * @brief Point structure for the Voyant LiDAR sensor
  * This (with the VoyantDeviceMetadata msg) can be used to rebuild .vynt recordings
+ *
+ * x/y/z are NaN for a return the sensor never measured a range for, so clouds are
+ * published with is_dense = false. Such a point still carries its drop_reason and
+ * its scan cell in point_idx.
  */
 struct EIGEN_ALIGN16 VoyantPoint
 {

@@ -26,9 +26,19 @@ inline void fillPointFromFrame(VoyantPoint &point,
                                const VoyantVec3 &xyz,
                                const VoyantFrame &frame)
 {
-  point.x = xyz.x;
-  point.y = xyz.y;
-  point.z = xyz.z;
+  // A point dropped before a range was measured keeps its real angles but has no
+  // x/y/z representation, so publish it as NaN -- the absent return that
+  // is_dense = false advertises -- rather than a position it never had.
+  if(p.range_m > 0.0f)
+  {
+    point.x = xyz.x;
+    point.y = xyz.y;
+    point.z = xyz.z;
+  }
+  else
+  {
+    point.x = point.y = point.z = std::numeric_limits<float>::quiet_NaN();
+  }
   point.v = p.doppler_mps;
   point.snr = p.snr;
   point.drop_reason = p.drop_reason;
@@ -155,7 +165,8 @@ inline VoyantFrame convertPointCloud2ToFrame(const sensor_msgs::msg::PointCloud2
 
     PointData p{};
     // Invert the sensor-frame projection (+x forward, +y left, +z up) back to the
-    // stored spherical fields; a zero-length position stays at range 0.
+    // stored spherical fields; a zero-length or NaN position stays at range 0, so a
+    // point published as an absent return rebuilds as one.
     const float range =
         std::sqrt(pcl_point.x * pcl_point.x + pcl_point.y * pcl_point.y + pcl_point.z * pcl_point.z);
     if(range > std::numeric_limits<float>::epsilon())
