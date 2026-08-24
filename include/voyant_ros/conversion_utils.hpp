@@ -11,7 +11,9 @@
 #include <cmath>
 #include <limits>
 #include <rclcpp/rclcpp.hpp>
+#include <string>
 #include <voyant_frame.hpp>
+#include <voyant_version.hpp>
 
 namespace voyant_ros
 {
@@ -81,6 +83,36 @@ inline sensor_msgs::msg::PointCloud2 convertFrameToPointCloud2(const VoyantFrame
 
   ros_cloud.header.frame_id = config.lidar_frame_id;
   return ros_cloud;
+}
+
+/**
+ * @brief Build the device metadata message that accompanies a point cloud stream
+ *
+ * The API and interface-contract versions describe the linked library; the firmware
+ * and HDL versions are the sensor's own and stay empty for a frame without state
+ * (a recording converted from the pre-v1.0.0 format).
+ */
+inline voyant_ros::msg::VoyantDeviceMetadata deviceMetadataFromFrame(const VoyantFrame &frame,
+                                                                     const SensorParams &config)
+{
+  voyant_ros::msg::VoyantDeviceMetadata metadata;
+  metadata.header.frame_id = config.lidar_frame_id;
+  metadata.device_id = frame.deviceId();
+  metadata.api_version = voyantApiVersion();
+  metadata.interface_contract_version = voyantInterfaceContractVersion();
+
+  if(std::optional<SensorState> state = frame.sensorState())
+  {
+    const DeviceInfo &device = state->device;
+    metadata.firmware_version = std::to_string(device.mcu_version_major) + "." +
+                                std::to_string(device.mcu_version_minor) + "." +
+                                std::to_string(device.mcu_version_patch);
+    metadata.hdl_version = std::to_string(device.fpga_version_major) + "." +
+                           std::to_string(device.fpga_version_minor) + "." +
+                           std::to_string(device.fpga_version_patch);
+  }
+
+  return metadata;
 }
 
 /**

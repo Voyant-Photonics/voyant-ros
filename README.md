@@ -194,6 +194,13 @@ every published cloud now carries the full field set. Delete the key from existi
 param files: unrecognized ROS parameters in a params file are silently ignored, so
 a stale `point_format` entry has no effect and only causes confusion.
 
+`VoyantDeviceMetadata` also changed: the four `*_version_hash` integers became
+readable strings. `/device_metadata` now publishes `api_version` and
+`interface_contract_version` (the `voyant-api` library this driver links, and the
+sensor wire protocol it was built for) plus `firmware_version` and `hdl_version`
+read from the sensor itself. The firmware and HDL fields are empty for a recording
+converted from the pre-1.0.0 format, which stored no sensor state.
+
 > 🚧 **Temporary fix (Carbon sensor)**
 >
 > The Carbon client requires the sensor to be brought up via Voyant Visualizer

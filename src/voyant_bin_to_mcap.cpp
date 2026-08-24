@@ -85,10 +85,9 @@ int main(int argc, char *argv[])
     // mcap_to_bin requires it when converting back to a recording.
     if(!wrote_device_metadata)
     {
-      voyant_ros::msg::VoyantDeviceMetadata metadata;
+      voyant_ros::msg::VoyantDeviceMetadata metadata =
+          voyant_ros::deviceMetadataFromFrame(frame, converter.config);
       metadata.header.stamp = cloud.header.stamp;
-      metadata.header.frame_id = converter.config.lidar_frame_id;
-      metadata.device_id = frame.deviceId();
       writer->write(metadata, "/device_metadata", rclcpp::Time(cloud.header.stamp));
       wrote_device_metadata = true;
     }

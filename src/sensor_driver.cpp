@@ -147,15 +147,18 @@ void VoyantSensorDriver::publishPointCloud()
         if(!published_metadata)
         {
           // Create and publish static metadata message
-          voyant_ros::msg::VoyantDeviceMetadata metadata;
+          voyant_ros::msg::VoyantDeviceMetadata metadata = deviceMetadataFromFrame(*frame, config_);
           metadata.header.stamp = this->now();
-          metadata.header.frame_id = config_.lidar_frame_id;
-          metadata.device_id = frame->deviceId();
 
           metadata_pub->publish(metadata);
           RCLCPP_INFO(get_logger(),
-                      "Published static metadata for device: %s",
-                      metadata.device_id.c_str());
+                      "Published static metadata for device: %s (firmware %s, HDL %s; API %s, "
+                      "interface contract %s)",
+                      metadata.device_id.c_str(),
+                      metadata.firmware_version.c_str(),
+                      metadata.hdl_version.c_str(),
+                      metadata.api_version.c_str(),
+                      metadata.interface_contract_version.c_str());
           published_metadata = true;
         }
       }
