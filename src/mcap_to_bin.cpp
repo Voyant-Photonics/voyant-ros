@@ -323,6 +323,15 @@ bool McapPlayback::processFrames()
         rclcpp::SerializedMessage serialized_msg(*bag_message->serialized_data);
         pc_serializer.deserialize_message(&serialized_msg, &cloud);
 
+        // Every cloud, not just the first: fields can differ between messages on one
+        // topic, and pcl::fromROSMsg zeroes what it cannot map instead of failing.
+        if(!contains_valid_format(cloud))
+        {
+          std::cerr << "\nFrame " << frame_count << " does not contain a valid point format"
+                    << std::endl;
+          return false;
+        }
+
         // Convert PointCloud2 back to VoyantFrame and record
         try
         {
@@ -336,10 +345,11 @@ bool McapPlayback::processFrames()
           }
           if(result == RecordResult::Finished)
           {
-            // A configured limit closed the log; this frame was not written.
-            std::cerr << "\nRecorder stopped at frame " << frame_count << " (limit reached)"
-                      << std::endl;
-            break;
+            // A configured limit closed the log without writing this frame, so the
+            // output is short of the bag -- a truncated conversion is a failed one.
+            std::cerr << "\nRecorder hit a limit at frame " << frame_count
+                      << "; the conversion is incomplete" << std::endl;
+            return false;
           }
 
           recorded_count++;
