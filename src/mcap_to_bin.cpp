@@ -69,6 +69,14 @@ bool resolveTopic(const std::vector<rosbag2_storage::TopicMetadata> &topics,
   std::vector<std::string> matches;
   for(const auto &topic : topics)
   {
+    // An exact hit settles it: voyant_bin_to_mcap writes topic_name verbatim, so a
+    // relative name reaches the bag as-is, and a fully-qualified one must win over a
+    // deeper namespace that merely ends the same way.
+    if(topic.name == name)
+    {
+      resolved = topic.name;
+      return true;
+    }
     if(isTopic(topic.name, name))
     {
       matches.push_back(topic.name);
