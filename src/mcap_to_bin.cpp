@@ -247,6 +247,18 @@ bool McapPlayback::validate()
     return false;
   }
 
+  // stateless() rejects an unrecognized ProductId, so probe it here rather than
+  // failing at the first frame of the second pass, once the output file already exists.
+  VoyantFrame::StatelessFrameDesc probe;
+  probe.source = static_cast<ProductId>(metadata_.product_id);
+  probe.serialNumber = metadata_.serial_number;
+  if(!VoyantFrame::stateless(std::vector<PointData>{}, probe))
+  {
+    std::cerr << "✗ Metadata carries an unrecognized product_id ("
+              << static_cast<int>(metadata_.product_id) << ")" << std::endl;
+    return false;
+  }
+
   std::cout << "✓ Validation complete" << std::endl;
   validated_ = true;
 
@@ -264,6 +276,10 @@ bool McapPlayback::processFrames()
     return false;
   }
 
+  // Restart from beginning. Reopened before the recorder is constructed: openReader()
+  // exits on failure, which would skip ~VoyantRecorder and orphan the output file.
+  openReader();
+
   // Create recorder with (mostly) default configuration
   VoyantRecorderConfig recorder_config(config_.bin_output);
   recorder_config.timestampFilename = false; // Turn time-stamping the filename off
@@ -276,9 +292,6 @@ bool McapPlayback::processFrames()
     std::cerr << "Failed to create VoyantRecorder: " << recorder.getLastError() << std::endl;
     return false;
   }
-
-  // Restart from beginning
-  openReader();
 
   std::cout << "\nProcessing frames..." << std::endl;
 
@@ -310,6 +323,13 @@ bool McapPlayback::processFrames()
           {
             std::cerr << "\nError recording frame " << frame_count << std::endl;
             return false;
+          }
+          if(result == RecordResult::Finished)
+          {
+            // A configured limit closed the log; this frame was not written.
+            std::cerr << "\nRecorder stopped at frame " << frame_count << " (limit reached)"
+                      << std::endl;
+            break;
           }
 
           recorded_count++;

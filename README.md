@@ -327,9 +327,11 @@ per-frame sensor state**: a bag carries the points, not the heartbeat behind the
 health, calibration, SDL settings and time-sync figures are lost. The sensor's identity
 survives only when the source frames carried state — a recording migrated from the
 pre-1.0.0 format carries none, so a round trip through a bag returns it with an unset
-device. Those frames report their state as absent rather than as zeros, which would
-decode into plausible-looking readings (a zeroed temperature becomes -273.15 °C).
-Record with `voyant_recorder` if you need the state preserved.
+device. Because a bag-rebuilt recording is itself stateless, identity survives exactly
+one round trip. Those frames report their state as absent rather than as zeros, which
+would decode into plausible-looking readings (a zeroed temperature becomes -273.15 °C).
+Per-point `user_data` is dropped too — the cloud has no field for it. Record with
+`voyant_recorder` if you need the state preserved.
 
 ## Cleaning up
 
@@ -386,7 +388,7 @@ It will also open the Foxglove GUI for visualization.
 2. Connect Foxglove to the default Foxglove websocket server at `ws://localhost:8765`
 3. In the top right corner of the Foxglove GUI title bar, click on the `Layout` button and import the configuration file from `config/voyant_foxglove_cfg.json`
 
-This will load a layout with pointcloud data visualization, offering three different color maps.
+This will load a layout with pointcloud data visualization, offering four different color maps.
 For more information on the colormap options, refer to the [Foxglove Colormap Documentation](https://voyant-photonics.github.io/foxglove/).
 
 ## Managing the Foxglove Layout Config

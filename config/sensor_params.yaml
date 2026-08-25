@@ -41,4 +41,4 @@
     mcap_output: '' # Desired output path
     storage_id: 'mcap' # sqlite3/mcap
     serialization_format: 'cdr'
-    topic_name: '/point_cloud' # Changing this will break the foxglove multi colormap visualization,
+    topic_name: '/point_cloud' # The foxglove colormap scripts subscribe to this literal topic

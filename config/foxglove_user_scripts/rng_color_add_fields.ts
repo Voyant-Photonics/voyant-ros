@@ -186,26 +186,11 @@ export default function script(
         };
     }
 
-    interface APIPointCloudMessage {
-        point_stride: number;
-        data: Uint8Array;
-        timestamp: {
-            sec: number;
-            nsec: number;
-        };
-        frame_id: string;
-        fields: any[];
-    }
-
     // Type guard functions
     // This is used because TypeScript can't infer the type of the message during compilation, but we can check it at runtime
     // Ref: https://www.typescriptlang.org/docs/handbook/advanced-types.html#using-the-in-operator
     function isROS2PointCloud(message: any): message is ROS2PointCloudMessage {
         return "row_step" in message && "point_step" in message;
-    }
-
-    function isAPIPointCloud(message: any): message is APIPointCloudMessage {
-        return "point_stride" in message;
     }
 
     if (isROS2PointCloud(event.message)) {
@@ -222,9 +207,6 @@ export default function script(
             ros_header,
             globalVars,
         );
-    } else if (isAPIPointCloud(event.message)) {
-        // Process API point cloud message
-        return processAPIPointCloud(event.message, globalVars);
     } else {
         throw new Error("Unknown point cloud message format");
     }
@@ -355,64 +337,6 @@ function processROS2PointCloud(
             nsec: ros_header.stamp.nsec,
         },
         frame_id: ros_header.frame_id,
-        pose: {
-            position: { x: 0, y: 0, z: 0 },
-            orientation: { x: 0, y: 0, z: 0, w: 1 },
-        },
-        point_stride: XYZRGBA_STRIDE,
-        fields: XYZRGBA_FIELDS,
-        data: xyzrgbaData,
-    };
-}
-
-/**
- * Processes an API PointCloud message and adds color information based on range values
- * @param api_message API PointCloud message
- * @param globalVars Global variables for range bounds
- * @returns Modified PointCloud message with color information
- */
-function processAPIPointCloud(
-    api_message: {
-        data: Uint8Array;
-        point_stride: number;
-        timestamp: {
-            sec: number;
-            nsec: number;
-        };
-        frame_id: string;
-        fields: any[];
-    },
-    globalVars: GlobalVariables,
-) {
-    const XYZ_OFFSET = 8;
-    const { data, point_stride: old_strid } = api_message;
-    const numPoints = Math.floor(data.length / old_strid);
-
-    // Extract XYZ and range values
-    const { xyz, rangeValues } = extractXYZAndRange(
-        data,
-        old_strid,
-        numPoints,
-        XYZ_OFFSET,
-    );
-
-    // Map range values to colors
-    const colorValues = mapRangeToRgb(
-        rangeColorMap,
-        rangeValues,
-        globalVars.range_band,
-    );
-
-    // Create XYZRGBA point cloud
-    const xyzrgbaData = createXYZRGBAPointCloud(xyz, colorValues, numPoints);
-
-    // Return the modified point cloud message
-    return {
-        timestamp: {
-            sec: api_message.timestamp.sec,
-            nsec: api_message.timestamp.nsec,
-        },
-        frame_id: api_message.frame_id,
         pose: {
             position: { x: 0, y: 0, z: 0 },
             orientation: { x: 0, y: 0, z: 0, w: 1 },

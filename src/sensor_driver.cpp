@@ -69,7 +69,7 @@ void VoyantSensorDriver::getParams()
   this->declare_parameter<bool>("observer_only", false);
   this->declare_parameter<bool>("diagnostic_mode", false);
   this->declare_parameter<int>("timestamp_mode", 0); // Default to TIME_FROM_SENSOR (0)
-  this->declare_parameter<std::string>("frame_id", "lidar_sensor");
+  this->declare_parameter<std::string>("frame_id", "voyant_sensor");
 
   config_.binding_address = this->get_parameter("binding_address").as_string();
   config_.multicast_group = this->get_parameter("multicast_group").as_string();

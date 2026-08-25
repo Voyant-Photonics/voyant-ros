@@ -40,11 +40,13 @@ inline void fillPointFromFrame(VoyantPoint &point,
                                const VoyantVec3 &xyz,
                                const VoyantFrame &frame)
 {
-  // Only a positive range names a position. A point dropped before its range was
-  // measured carries the placeholder the datum shift leaves negative, so publish NaN --
-  // the absent return that is_dense = false advertises -- rather than a position it
-  // never had. A point dropped *after* a real measurement (the spatial filter, say)
-  // keeps its positive range and is published like any other.
+  // A position is published only where the stored range is positive, i.e. the projection
+  // names a place in front of the datum. Everything else publishes NaN -- the absent
+  // return is_dense = false advertises -- covering both a point dropped before any range
+  // was measured and a real near-field return the datum shift leaves behind the origin.
+  // The sign does not distinguish them, and DROP_REASON_VALID is the only drop_reason a
+  // consumer should read. A point dropped after a real measurement (the spatial filter,
+  // say) keeps its positive range and is published like any other.
   if(p.range_m > 0.0f)
   {
     point.x = xyz.x;
@@ -150,9 +152,10 @@ inline voyant_ros::msg::VoyantDeviceMetadata deviceMetadataFromFrame(const Voyan
  * The rebuilt frame keeps the cloud's timeline and the sensor's identity, but declares
  * no state: a bag carries the points, not the per-frame heartbeat behind them, so the
  * recording reports "none was recorded" rather than defaults that read as measurements.
- * combine_method and user_data are internal-only, so the cloud has no field for
- * them and they rebuild as zero; so do the angles of a point published as an absent
- * return, which has no x/y/z to invert (its scan cell survives in the index fields).
+ * The cloud has no field for combine_method (internal per-value) or user_data
+ * (user-owned scratch that native .vynt I/O preserves verbatim but a bag drops), so
+ * both rebuild as zero; so do the angles of a point published as an absent return,
+ * which has no x/y/z to invert (its scan cell survives in the index fields).
  */
 inline VoyantFrame convertPointCloud2ToFrame(const sensor_msgs::msg::PointCloud2 &cloud,
                                              const voyant_ros::msg::VoyantDeviceMetadata &metadata)
@@ -200,7 +203,8 @@ inline VoyantFrame convertPointCloud2ToFrame(const sensor_msgs::msg::PointCloud2
   }
 
   // The API owns the projection in both directions; a NaN position -- how this driver
-  // publishes an absent return -- rebuilds as range 0, the same state it was read from.
+  // publishes an absent return -- rebuilds at range 0 with zeroed angles, so a return
+  // read at a negative range does not come back at one.
   if(!setPointsXyz(points, positions))
   {
     throw std::runtime_error(
