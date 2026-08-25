@@ -6,4 +6,5 @@
 # These parameters are used in the MCAP -> voyant .vynt conversion
 
 mcap_input: '' # Path to your input file
-bin_output: '' # Desired output path (must end in .vynt)
+bin_output: '' # Desired output path (must end in .vynt; delete it first to re-run)
+topic_name: '/point_cloud' # Point cloud topic in the bag; must match the topic it was recorded on

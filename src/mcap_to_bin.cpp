@@ -23,6 +23,7 @@ McapConfig load_config(const std::string &yaml_path)
     YAML::Node yaml_config = YAML::LoadFile(yaml_path);
     config.mcap_input = yaml_config["mcap_input"].as<std::string>();
     config.bin_output = yaml_config["bin_output"].as<std::string>();
+    config.topic_name = yaml_config["topic_name"].as<std::string>();
   }
   catch(const std::exception &e)
   {
@@ -114,7 +115,7 @@ bool McapPlayback::validate()
     }
 
     // Check first point cloud frame
-    if(bag_message->topic_name.find("point_cloud") != std::string::npos && !first_frame_validated)
+    if(bag_message->topic_name.find(config_.topic_name) != std::string::npos && !first_frame_validated)
     {
       try
       {
@@ -171,15 +172,6 @@ bool McapPlayback::processFrames()
     return false;
   }
 
-  // The recorder reports only valid/invalid, so check the extension here to have a
-  // reason to give.
-  if(config_.bin_output.size() < 5 ||
-     config_.bin_output.compare(config_.bin_output.size() - 5, 5, ".vynt") != 0)
-  {
-    std::cerr << "Output path must end in .vynt: " << config_.bin_output << std::endl;
-    return false;
-  }
-
   // Create recorder with (mostly) default configuration
   VoyantRecorderConfig recorder_config(config_.bin_output);
   recorder_config.timestampFilename = false; // Turn time-stamping the filename off
@@ -187,7 +179,9 @@ bool McapPlayback::processFrames()
 
   if(!recorder.isValid())
   {
-    std::cerr << "Failed to create VoyantRecorder" << std::endl;
+    // Construction opens the output file, so this covers a non-.vynt path and an
+    // existing file as well as an unwritable one.
+    std::cerr << "Failed to create VoyantRecorder: " << recorder.getLastError() << std::endl;
     return false;
   }
 
@@ -206,7 +200,7 @@ bool McapPlayback::processFrames()
     auto bag_message = reader_->read_next();
 
     // Process only point cloud messages
-    if(bag_message->topic_name.find("point_cloud") != std::string::npos)
+    if(bag_message->topic_name.find(config_.topic_name) != std::string::npos)
     {
       try
       {
@@ -262,8 +256,9 @@ bool McapPlayback::processFrames()
 
 bool McapPlayback::contains_valid_format(const sensor_msgs::msg::PointCloud2 &cloud)
 {
-  // Types are checked because PCL maps a field only when name and datatype both match,
-  // and silently leaves the destination zeroed otherwise.
+  // PCL maps a field only when name, datatype and count all match, and silently leaves
+  // the destination zeroed otherwise -- so all three are checked here. Every field
+  // below is a scalar, which PCL spells as count 1 or, tolerated, 0.
   using Field = sensor_msgs::msg::PointField;
   const std::map<std::string, uint8_t> required_fields = {{"x", Field::FLOAT32},
                                                           {"y", Field::FLOAT32},
@@ -272,14 +267,15 @@ bool McapPlayback::contains_valid_format(const sensor_msgs::msg::PointCloud2 &cl
                                                           {"snr", Field::FLOAT32},
                                                           {"drop_reason", Field::UINT8},
                                                           {"timestamp_nsecs", Field::UINT32},
-                                                          {"point_idx", Field::UINT32},
+                                                          {"azimuth_idx", Field::UINT16},
+                                                          {"elevation_idx", Field::UINT16},
                                                           {"calibrated_reflectance", Field::FLOAT32},
                                                           {"frame_index", Field::UINT32}};
 
-  std::map<std::string, uint8_t> found_fields;
+  std::map<std::string, const Field *> found_fields;
   for(const auto &field : cloud.fields)
   {
-    found_fields.emplace(field.name, field.datatype);
+    found_fields.emplace(field.name, &field);
   }
 
   bool valid = true;
@@ -291,10 +287,17 @@ bool McapPlayback::contains_valid_format(const sensor_msgs::msg::PointCloud2 &cl
       std::cout << "PointCloud missing required field: " << name << std::endl;
       valid = false;
     }
-    else if(found->second != datatype)
+    else if(found->second->datatype != datatype)
     {
-      std::cout << "PointCloud field '" << name << "' has type " << static_cast<int>(found->second)
-                << ", expected " << static_cast<int>(datatype) << std::endl;
+      std::cout << "PointCloud field '" << name << "' has type "
+                << static_cast<int>(found->second->datatype) << ", expected "
+                << static_cast<int>(datatype) << std::endl;
+      valid = false;
+    }
+    else if(found->second->count > 1)
+    {
+      std::cout << "PointCloud field '" << name << "' has count " << found->second->count
+                << ", expected a scalar" << std::endl;
       valid = false;
     }
   }

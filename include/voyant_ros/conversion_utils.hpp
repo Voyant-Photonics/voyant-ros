@@ -8,7 +8,6 @@
 #include "voyant_ros/msg/voyant_device_metadata.hpp"
 #include "voyant_ros/point_types.hpp"
 #include "voyant_ros/sensor_params.hpp"
-#include <cmath>
 #include <limits>
 #include <rclcpp/rclcpp.hpp>
 #include <string>
@@ -48,7 +47,8 @@ inline void fillPointFromFrame(VoyantPoint &point,
   point.snr = p.snr;
   point.drop_reason = p.drop_reason;
   point.timestamp_nsecs = p.timestamp_nanosecs;
-  point.point_idx = (static_cast<uint32_t>(p.azimuth_idx) << 16) | p.elevation_idx;
+  point.azimuth_idx = p.azimuth_idx;
+  point.elevation_idx = p.elevation_idx;
   point.calibrated_reflectance = p.calibrated_reflectance;
   point.frame_index = frame.frameIndex();
 }
@@ -139,7 +139,8 @@ inline voyant_ros::msg::VoyantDeviceMetadata deviceMetadataFromFrame(const Voyan
  * no state: a bag carries the points, not the per-frame heartbeat behind them, so the
  * recording reports "none was recorded" rather than defaults that read as measurements.
  * combine_method and user_data are internal-only, so the cloud has no field for
- * them and they rebuild as zero.
+ * them and they rebuild as zero; so do the angles of a point published as an absent
+ * return, which has no x/y/z to invert (its scan cell survives in the index fields).
  */
 inline VoyantFrame convertPointCloud2ToFrame(const sensor_msgs::msg::PointCloud2 &cloud,
                                              const voyant_ros::msg::VoyantDeviceMetadata &metadata)
@@ -160,7 +161,9 @@ inline VoyantFrame convertPointCloud2ToFrame(const sensor_msgs::msg::PointCloud2
   }
 
   std::vector<PointData> points;
+  std::vector<VoyantVec3> positions;
   points.reserve(pcl_cloud.size());
+  positions.reserve(pcl_cloud.size());
 
   for(const auto &pcl_point : pcl_cloud.points)
   {
@@ -172,26 +175,24 @@ inline VoyantFrame convertPointCloud2ToFrame(const sensor_msgs::msg::PointCloud2
     }
 
     PointData p{};
-    // Invert the sensor-frame projection (+x forward, +y left, +z up) back to the
-    // stored spherical fields; a zero-length or NaN position stays at range 0, so a
-    // point published as an absent return rebuilds as one.
-    const float range =
-        std::sqrt(pcl_point.x * pcl_point.x + pcl_point.y * pcl_point.y + pcl_point.z * pcl_point.z);
-    if(range > std::numeric_limits<float>::epsilon())
-    {
-      p.range_m = range;
-      p.azimuth_rad = std::atan2(pcl_point.y, pcl_point.x);
-      p.elevation_rad = std::asin(pcl_point.z / range);
-    }
     p.doppler_mps = pcl_point.v;
     p.snr = pcl_point.snr;
     p.calibrated_reflectance = pcl_point.calibrated_reflectance;
     p.timestamp_nanosecs = pcl_point.timestamp_nsecs;
-    p.azimuth_idx = static_cast<uint16_t>(pcl_point.point_idx >> 16);
-    p.elevation_idx = static_cast<uint16_t>(pcl_point.point_idx & 0xFFFF);
+    p.azimuth_idx = pcl_point.azimuth_idx;
+    p.elevation_idx = pcl_point.elevation_idx;
     p.drop_reason = pcl_point.drop_reason;
 
     points.push_back(p);
+    positions.push_back(VoyantVec3{pcl_point.x, pcl_point.y, pcl_point.z});
+  }
+
+  // The API owns the projection in both directions; a NaN position -- how this driver
+  // publishes an absent return -- rebuilds as range 0, the same state it was read from.
+  if(!setPointsXyz(points, positions))
+  {
+    throw std::runtime_error(
+        "Failed to restore point geometry from PointCloud2 (device: " + metadata.device_id + ")");
   }
 
   VoyantFrame::StatelessFrameDesc desc;

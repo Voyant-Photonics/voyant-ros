@@ -19,7 +19,7 @@ namespace voyant_ros
  *
  * x/y/z are NaN for a return the sensor never measured a range for, so clouds are
  * published with is_dense = false. Such a point still carries its drop_reason and
- * its scan cell in point_idx.
+ * its scan cell in azimuth_idx/elevation_idx.
  */
 struct EIGEN_ALIGN16 VoyantPoint
 {
@@ -28,8 +28,9 @@ struct EIGEN_ALIGN16 VoyantPoint
   float snr;                    // Linear (not dB) signal-to-noise ratio
   uint8_t drop_reason;          // 1 = valid return, any other value = dropped
   uint32_t timestamp_nsecs;     // Nanoseconds since frame start
-  uint32_t point_idx;           // (azimuth_idx << 16) | elevation_idx — scan column high, line low
-  float calibrated_reflectance; // Calibrated reflectance (dB)
+  uint16_t azimuth_idx;         // Scan column index, 0 at the leftmost column
+  uint16_t elevation_idx;       // Elevation line index, 0 at the topmost line
+  float calibrated_reflectance; // Calibrated reflectance, already in dB
   uint32_t frame_index;         // Device frame counter, from the frame header
 
   inline VoyantPoint()
@@ -40,7 +41,8 @@ struct EIGEN_ALIGN16 VoyantPoint
     snr = 0.0f;
     drop_reason = 0;
     timestamp_nsecs = 0;
-    point_idx = 0;
+    azimuth_idx = 0;
+    elevation_idx = 0;
     calibrated_reflectance = 0.0f;
     frame_index = 0;
   }
@@ -52,10 +54,10 @@ struct EIGEN_ALIGN16 VoyantPoint
 // Register point type with PCL
 POINT_CLOUD_REGISTER_POINT_STRUCT(
     voyant_ros::VoyantPoint,
-    (float, x, x)(float, y, y)(float, z, z)(float, v, v)(float, snr, snr)(
-        uint8_t,
-        drop_reason,
-        drop_reason)(uint32_t, timestamp_nsecs, timestamp_nsecs)(uint32_t, point_idx, point_idx)(
+    (float, x, x)(float, y, y)(float, z, z)(float, v, v)(float, snr, snr)(uint8_t, drop_reason, drop_reason)(
+        uint32_t,
+        timestamp_nsecs,
+        timestamp_nsecs)(uint16_t, azimuth_idx, azimuth_idx)(uint16_t, elevation_idx, elevation_idx)(
         float,
         calibrated_reflectance,
         calibrated_reflectance)(uint32_t, frame_index, frame_index))

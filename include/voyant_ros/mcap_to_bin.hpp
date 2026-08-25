@@ -22,6 +22,8 @@ struct McapConfig
 {
   std::string mcap_input;
   std::string bin_output;
+  /// Point-cloud topic to read; must match the `topic_name` the bag was written with.
+  std::string topic_name;
 };
 
 /**
