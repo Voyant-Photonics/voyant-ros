@@ -45,6 +45,58 @@ McapPlayback::McapPlayback(const McapConfig &config)
   converter_options_.output_serialization_format = "cdr";
 }
 
+namespace
+{
+
+/// Whether `bag_topic` is the topic called `name`, allowing for a namespace: the driver
+/// publishes relative names, so a capture under /front records /front/point_cloud. The
+/// leading slash makes this a path-segment match -- /point_cloud_filtered is a different
+/// topic, not a longer spelling of /point_cloud.
+bool isTopic(const std::string &bag_topic, const std::string &name)
+{
+  const std::string suffix = name.empty() || name.front() == '/' ? name : "/" + name;
+  return bag_topic.size() >= suffix.size() &&
+         bag_topic.compare(bag_topic.size() - suffix.size(), suffix.size(), suffix) == 0;
+}
+
+/// The one topic in `topics` called `name`. Ambiguity is refused rather than guessed:
+/// picking one of two sensors' streams would silently pair a cloud with the wrong
+/// device's serial in the rebuilt recording.
+bool resolveTopic(const std::vector<rosbag2_storage::TopicMetadata> &topics,
+                  const std::string &name,
+                  std::string &resolved)
+{
+  std::vector<std::string> matches;
+  for(const auto &topic : topics)
+  {
+    if(isTopic(topic.name, name))
+    {
+      matches.push_back(topic.name);
+    }
+  }
+
+  if(matches.empty())
+  {
+    std::cerr << "✗ No '" << name << "' topic in this bag" << std::endl;
+    return false;
+  }
+  if(matches.size() > 1)
+  {
+    std::cerr << "✗ Ambiguous '" << name << "': this bag has";
+    for(const auto &match : matches)
+    {
+      std::cerr << " " << match;
+    }
+    std::cerr << "\n  Set topic_name to the full topic you want to convert." << std::endl;
+    return false;
+  }
+
+  resolved = matches.front();
+  return true;
+}
+
+} // namespace
+
 void McapPlayback::openReader()
 {
   reader_ = std::make_unique<rosbag2_cpp::Reader>();
@@ -60,11 +112,25 @@ void McapPlayback::openReader()
   }
 }
 
+bool McapPlayback::resolveTopics()
+{
+  const std::vector<rosbag2_storage::TopicMetadata> topics = reader_->get_all_topics_and_types();
+  return resolveTopic(topics, config_.topic_name, cloud_topic_) &&
+         resolveTopic(topics, kDeviceMetadataTopic, metadata_topic_);
+}
+
 bool McapPlayback::validate()
 {
   openReader();
 
   std::cout << "Validating file: " << config_.mcap_input << std::endl;
+
+  // Resolved once, up front: both passes then compare topics exactly.
+  if(!resolveTopics())
+  {
+    return false;
+  }
+  std::cout << "✓ Converting " << cloud_topic_ << " with " << metadata_topic_ << std::endl;
 
   bool metadata_found = false;
   bool first_frame_validated = false;
@@ -78,7 +144,7 @@ bool McapPlayback::validate()
     auto bag_message = reader_->read_next();
 
     // Check for metadata message
-    if(bag_message->topic_name.find(kDeviceMetadataTopic) != std::string::npos && !metadata_found)
+    if(bag_message->topic_name == metadata_topic_ && !metadata_found)
     {
       try
       {
@@ -115,7 +181,7 @@ bool McapPlayback::validate()
     }
 
     // Check first point cloud frame
-    if(bag_message->topic_name.find(config_.topic_name) != std::string::npos && !first_frame_validated)
+    if(bag_message->topic_name == cloud_topic_ && !first_frame_validated)
     {
       try
       {
@@ -200,7 +266,7 @@ bool McapPlayback::processFrames()
     auto bag_message = reader_->read_next();
 
     // Process only point cloud messages
-    if(bag_message->topic_name.find(config_.topic_name) != std::string::npos)
+    if(bag_message->topic_name == cloud_topic_)
     {
       try
       {

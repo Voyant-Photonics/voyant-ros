@@ -210,8 +210,10 @@ changed, and existing param files need editing:
   reads the YAML directly and exits if the key is missing, so this rename is not
   optional for it. The live node now drops invalid returns by default, where before it
   kept them.
-- `mcap_to_bin_params.yaml` gained a **`topic_name`** key, which must match the topic
-  the bag's clouds were recorded on. Add it to an existing file.
+- `mcap_to_bin_params.yaml` gained a **`topic_name`** key naming the bag's point-cloud
+  topic. Add it to an existing file. A namespaced capture resolves too — `/point_cloud`
+  finds `/front/point_cloud` — but if a bag holds more than one match (two sensors, say)
+  the converter refuses to guess: give it the full topic.
 
 `VoyantDeviceMetadata` also changed: the four `*_version_hash` integers became
 readable strings. `/device_metadata` now publishes `api_version` and

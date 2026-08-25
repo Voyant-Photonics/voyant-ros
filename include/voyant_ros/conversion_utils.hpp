@@ -18,8 +18,8 @@ namespace voyant_ros
 {
 
 /// Device-metadata topic as it appears in a bag. The driver publishes the relative
-/// name, which resolves to this outside a namespace; readers substring-match it so a
-/// namespaced capture still hits.
+/// name, which resolves to this outside a namespace; readers match the trailing path
+/// segment so a namespaced capture still resolves to it.
 inline constexpr const char *kDeviceMetadataTopic = "/device_metadata";
 
 /**
