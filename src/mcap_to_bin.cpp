@@ -85,12 +85,15 @@ bool McapPlayback::validate()
         metadata_serializer.deserialize_message(&serialized_msg, &metadata_);
         metadata_found = true;
 
-        // api_version arrived with the v1.0.0 message; without it the bag predates this
-        // driver, and its clouds carry a point layout this build cannot rebuild.
+        // api_version arrived with the v1.0.0 message, so an empty one means the writer
+        // used an older definition -- either a pre-1.0.0 driver or a stale voyant_ros
+        // install shadowing the one that wrote the bag.
         if(metadata_.api_version.empty())
         {
-          std::cerr << "✗ Metadata has no api_version: this MCAP was recorded by a "
-                       "pre-1.0.0 driver and cannot be converted"
+          std::cerr << "✗ Metadata has no api_version. Either the MCAP was recorded by a "
+                       "pre-1.0.0 driver,\n  or it was written against a stale voyant_ros "
+                       "install: check for an older\n  ros-$ROS_DISTRO-voyant-ros package "
+                       "shadowing your build."
                     << std::endl;
           return false;
         }
@@ -103,8 +106,8 @@ bool McapPlayback::validate()
         // A pre-1.0.0 bag carries four version *hashes* where this build expects
         // strings, so it fails here rather than at the api_version check below.
         std::cerr << "✗ Failed to parse metadata: " << e.what()
-                  << "\n  The MCAP was most likely recorded by a pre-1.0.0 driver, whose "
-                     "VoyantDeviceMetadata and point layout this build cannot read."
+                  << "\n  The bag's VoyantDeviceMetadata does not match this build: it was "
+                     "written by a\n  pre-1.0.0 driver, or against a stale voyant_ros install."
                   << std::endl;
         return false;
       }
