@@ -25,20 +25,14 @@
     # must use "multicast" so this node can receive the shared stream. Exactly one primary per sensor.
     observer_only: false
 
-    ## Shared parameters
+    ## Output parameters
     # timestamp_mode[optional]
     # - 0 = TIME_FROM_SENSOR
     # - 1 = TIME_FROM_ROS
     timestamp_mode: 0
 
-    # Include invalid returns (with their drop_reason) instead of valid points only.
-    # Live: runs the client in diagnostic mode; conversion: keeps a recording's invalid points.
+    # Include invalid returns (with their drop_reason) instead of valid points only:
+    # runs the client in diagnostic mode.
     diagnostic_mode: false
 
-    ## The below params are shared with the bin_to_mcap conversion
-    frame_id: 'voyant_sensor'
-    bin_input: '' # Path to your .vynt recording
-    mcap_output: '' # Desired output path
-    storage_id: 'mcap' # sqlite3/mcap
-    serialization_format: 'cdr'
-    topic_name: '/point_cloud' # The foxglove colormap scripts subscribe to this literal topic
+    frame_id: 'voyant_sensor' # frame_id stamped on every published cloud

@@ -21,6 +21,16 @@ McapConfig load_config(const std::string &yaml_path)
   try
   {
     YAML::Node yaml_config = YAML::LoadFile(yaml_path);
+
+    // yaml-cpp reports a missing key as a bare "bad conversion", so name it instead.
+    for(const char *key : {"mcap_input", "bin_output", "topic_name"})
+    {
+      if(!yaml_config[key])
+      {
+        throw std::runtime_error(std::string("missing key '") + key + "'");
+      }
+    }
+
     config.mcap_input = yaml_config["mcap_input"].as<std::string>();
     config.bin_output = yaml_config["bin_output"].as<std::string>();
     config.topic_name = yaml_config["topic_name"].as<std::string>();

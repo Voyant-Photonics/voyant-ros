@@ -210,6 +210,11 @@ changed, and existing param files need editing:
   reads the YAML directly and exits if the key is missing, so this rename is not
   optional for it. The live node now drops invalid returns by default, where before it
   kept them.
+- `voyant_bin_to_mcap` now reads its own **`bin_to_mcap_params.yaml`** rather than
+  `sensor_params.yaml`, as a flat key/value file rather than the node's
+  `/**: ros__parameters:` form. Copy the packaged file and set `bin_input`/`mcap_output`
+  there; `sensor_params.yaml` keeps only the live driver's parameters. Both converters
+  now name a missing key instead of reporting "bad conversion".
 - `mcap_to_bin_params.yaml` gained a **`topic_name`** key naming the bag's point-cloud
   topic. Add it to an existing file. A namespaced capture resolves too — `/point_cloud`
   finds `/front/point_cloud` — but if a bag holds more than one match (two sensors, say)
@@ -281,15 +286,20 @@ Each tool takes the path to a YAML config:
 
 | Config | Used by |
 | ------ | ------- |
-| `sensor_params.yaml` | `voyant_bin_to_mcap`, and the live driver |
+| `sensor_params.yaml` | the live driver |
+| `bin_to_mcap_params.yaml` | `voyant_bin_to_mcap` |
 | `mcap_to_bin_params.yaml` | `voyant_mcap_to_bin` |
+
+The driver is a ROS2 node, so `sensor_params.yaml` uses the `/**: ros__parameters:`
+form. The two converters are plain command-line tools, so their configs are flat
+key/value files.
 
 The packaged copies live in `share/voyant_ros/config/` under the install prefix —
 `/opt/ros/$ROS_DISTRO/` for a released package — which is root-owned. Copy them
 somewhere writable rather than editing in place:
 
 ```bash
-cp /opt/ros/$ROS_DISTRO/share/voyant_ros/config/sensor_params.yaml \
+cp /opt/ros/$ROS_DISTRO/share/voyant_ros/config/bin_to_mcap_params.yaml \
    /opt/ros/$ROS_DISTRO/share/voyant_ros/config/mcap_to_bin_params.yaml ~/
 ```
 
@@ -298,10 +308,10 @@ the config file — absolute paths are the safe choice.
 
 ### `.vynt` → MCAP
 
-Set `bin_input` and `mcap_output` in `sensor_params.yaml`, then:
+Set `bin_input` and `mcap_output` in `bin_to_mcap_params.yaml`, then:
 
 ```bash
-ros2 run voyant_ros voyant_bin_to_mcap ~/sensor_params.yaml
+ros2 run voyant_ros voyant_bin_to_mcap ~/bin_to_mcap_params.yaml
 ```
 
 `mcap_output` is a directory, and rosbag2 refuses to write into one that already

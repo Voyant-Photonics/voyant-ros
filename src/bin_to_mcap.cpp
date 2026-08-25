@@ -24,20 +24,31 @@ SensorParams Bin2Mcap::load_conversion_params(const std::string &yaml_path)
   try
   {
     YAML::Node config = YAML::LoadFile(yaml_path);
-    auto sensor_config = config["/**"]["ros__parameters"];
 
-    if(!sensor_config)
+    // yaml-cpp reports a missing key as a bare "bad conversion", so name it instead.
+    for(const char *key : {"bin_input",
+                           "mcap_output",
+                           "topic_name",
+                           "frame_id",
+                           "storage_id",
+                           "serialization_format",
+                           "timestamp_mode",
+                           "diagnostic_mode"})
     {
-      throw std::runtime_error("Missing 'sensor_params' section");
+      if(!config[key])
+      {
+        throw std::runtime_error(std::string("missing key '") + key + "'");
+      }
     }
-    params.bin_input = sensor_config["bin_input"].as<std::string>();
-    params.mcap_output = sensor_config["mcap_output"].as<std::string>();
-    params.lidar_frame_id = sensor_config["frame_id"].as<std::string>();
-    params.timestamp_mode = sensor_config["timestamp_mode"].as<int>();
-    params.diagnostic_mode = sensor_config["diagnostic_mode"].as<bool>();
-    params.storage_id = sensor_config["storage_id"].as<std::string>();
-    params.serialization_format = sensor_config["serialization_format"].as<std::string>();
-    params.topic_name = sensor_config["topic_name"].as<std::string>();
+
+    params.bin_input = config["bin_input"].as<std::string>();
+    params.mcap_output = config["mcap_output"].as<std::string>();
+    params.lidar_frame_id = config["frame_id"].as<std::string>();
+    params.timestamp_mode = config["timestamp_mode"].as<int>();
+    params.diagnostic_mode = config["diagnostic_mode"].as<bool>();
+    params.storage_id = config["storage_id"].as<std::string>();
+    params.serialization_format = config["serialization_format"].as<std::string>();
+    params.topic_name = config["topic_name"].as<std::string>();
   }
   catch(const std::exception &e)
   {

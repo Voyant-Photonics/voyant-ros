@@ -16,6 +16,7 @@
   <depend>rosbag2_cpp</depend>
   <depend version_gte="1.0.0">voyant-api</depend>
   <depend>ament_index_cpp</depend>
+  <depend>yaml-cpp</depend>
 
   <build_depend>libpcl-all-dev</build_depend>
   <build_depend>rosidl_default_generators</build_depend>
