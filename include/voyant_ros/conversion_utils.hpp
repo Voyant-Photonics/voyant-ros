@@ -40,12 +40,12 @@ inline void fillPointFromFrame(VoyantPoint &point,
                                const VoyantVec3 &xyz,
                                const VoyantFrame &frame)
 {
-  // A point dropped before a range was measured has no x/y/z representation: it keeps
-  // its real angles but never got a distance, so publish NaN -- the absent return that
-  // is_dense = false advertises -- rather than a position it never had. That is range 0
-  // exactly. A negative range is a measured return just behind the datum, whose
-  // position is real, so it is published like any other.
-  if(p.range_m != 0.0f)
+  // Only a positive range names a position. A point dropped before its range was
+  // measured carries the placeholder the datum shift leaves negative, so publish NaN --
+  // the absent return that is_dense = false advertises -- rather than a position it
+  // never had. A point dropped *after* a real measurement (the spatial filter, say)
+  // keeps its positive range and is published like any other.
+  if(p.range_m > 0.0f)
   {
     point.x = xyz.x;
     point.y = xyz.y;
@@ -152,9 +152,7 @@ inline voyant_ros::msg::VoyantDeviceMetadata deviceMetadataFromFrame(const Voyan
  * recording reports "none was recorded" rather than defaults that read as measurements.
  * combine_method and user_data are internal-only, so the cloud has no field for
  * them and they rebuild as zero; so do the angles of a point published as an absent
- * return, which has no x/y/z to invert (its scan cell survives in the index fields). A
- * return behind the datum keeps its position but comes back spelled as a positive range
- * with the angles turned around -- the same point, the other way of naming it.
+ * return, which has no x/y/z to invert (its scan cell survives in the index fields).
  */
 inline VoyantFrame convertPointCloud2ToFrame(const sensor_msgs::msg::PointCloud2 &cloud,
                                              const voyant_ros::msg::VoyantDeviceMetadata &metadata)
