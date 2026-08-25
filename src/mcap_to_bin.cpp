@@ -59,12 +59,11 @@ bool isTopic(const std::string &bag_topic, const std::string &name)
          bag_topic.compare(bag_topic.size() - suffix.size(), suffix.size(), suffix) == 0;
 }
 
-/// The one topic in `topics` called `name`, or false with `remedy` printed. Ambiguity is
-/// refused rather than guessed: picking one of two sensors' streams would silently pair a
-/// cloud with the wrong device's serial in the rebuilt recording.
+/// The one topic in `topics` called `name`. Ambiguity is refused rather than guessed:
+/// picking one of two sensors' streams would silently pair a cloud with the wrong
+/// device's serial in the rebuilt recording.
 bool resolveTopic(const std::vector<rosbag2_storage::TopicMetadata> &topics,
                   const std::string &name,
-                  const std::string &remedy,
                   std::string &resolved)
 {
   std::vector<std::string> matches;
@@ -88,7 +87,7 @@ bool resolveTopic(const std::vector<rosbag2_storage::TopicMetadata> &topics,
     {
       std::cerr << " " << match;
     }
-    std::cerr << "\n  " << remedy << std::endl;
+    std::cerr << "\n  Set topic_name to the full topic you want to convert." << std::endl;
     return false;
   }
 
@@ -116,33 +115,26 @@ void McapPlayback::openReader()
 bool McapPlayback::resolveTopics()
 {
   const std::vector<rosbag2_storage::TopicMetadata> topics = reader_->get_all_topics_and_types();
-  if(!resolveTopic(topics,
-                   config_.topic_name,
-                   "Set topic_name to the full topic you want to convert.",
-                   cloud_topic_))
+  if(!resolveTopic(topics, config_.topic_name, cloud_topic_))
   {
     return false;
   }
 
-  // Metadata is the cloud's sibling -- the driver publishes both as relative names from
-  // one node -- so naming a full topic_name is enough to pick a sensor out of a
-  // multi-sensor bag: /front/point_cloud pairs with /front/device_metadata.
-  const std::string sibling = cloud_topic_.substr(0, cloud_topic_.rfind('/')) + kDeviceMetadataTopic;
+  // The metadata must be the cloud's sibling, not merely the only one in the bag:
+  // accepting /rear/device_metadata for /front/point_cloud would rebuild one sensor's
+  // clouds under the other's identity.
+  metadata_topic_ = deviceMetadataTopicFor(cloud_topic_);
   for(const auto &topic : topics)
   {
-    if(topic.name == sibling)
+    if(topic.name == metadata_topic_)
     {
-      metadata_topic_ = sibling;
       return true;
     }
   }
 
-  // No sibling: the metadata was recorded at some other level, so fall back to the whole
-  // bag -- which still refuses to guess between two.
-  return resolveTopic(topics,
-                      kDeviceMetadataTopic,
-                      "Expected " + sibling + ", alongside the cloud topic.",
-                      metadata_topic_);
+  std::cerr << "✗ No '" << metadata_topic_ << "' topic in this bag, alongside " << cloud_topic_
+            << std::endl;
+  return false;
 }
 
 bool McapPlayback::validate()

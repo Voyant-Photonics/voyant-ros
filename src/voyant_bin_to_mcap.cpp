@@ -89,7 +89,9 @@ int main(int argc, char *argv[])
           voyant_ros::deviceMetadataFromFrame(frame, converter.config);
       metadata.header.stamp = cloud.header.stamp;
       metadata.recording_api_version = player.apiVersion();
-      writer->write(metadata, voyant_ros::kDeviceMetadataTopic, rclcpp::Time(cloud.header.stamp));
+      writer->write(metadata,
+                    voyant_ros::deviceMetadataTopicFor(converter.config.topic_name),
+                    rclcpp::Time(cloud.header.stamp));
       wrote_device_metadata = true;
     }
 

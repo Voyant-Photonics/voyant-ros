@@ -322,10 +322,12 @@ Only bags carrying the full driver field set and a `/device_metadata` topic conv
 include that topic alongside the points. Bags recorded by a pre-1.0.0 driver are
 rejected — their point layout differs.
 
-The rebuilt recording keeps the point data, the frame timeline and the sensor's
-identity, but **not the per-frame sensor state**: a bag carries the points, not the
-heartbeat behind them, so health, calibration, SDL settings and time-sync figures are
-lost. Those frames report their state as absent rather than as zeros, which would
+The rebuilt recording keeps the point data and the frame timeline, but **not the
+per-frame sensor state**: a bag carries the points, not the heartbeat behind them, so
+health, calibration, SDL settings and time-sync figures are lost. The sensor's identity
+survives only when the source frames carried state — a recording migrated from the
+pre-1.0.0 format carries none, so a round trip through a bag returns it with an unset
+device. Those frames report their state as absent rather than as zeros, which would
 decode into plausible-looking readings (a zeroed temperature becomes -273.15 °C).
 Record with `voyant_recorder` if you need the state preserved.
 

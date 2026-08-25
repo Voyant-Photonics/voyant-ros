@@ -22,6 +22,16 @@ namespace voyant_ros
 /// segment so a namespaced capture still resolves to it.
 inline constexpr const char *kDeviceMetadataTopic = "/device_metadata";
 
+/// The device-metadata topic belonging beside `cloud_topic`: the driver publishes both
+/// as relative names from one node, so they always share a namespace. Both converters
+/// pair them this way, which is what lets one sensor be picked out of a multi-sensor bag.
+inline std::string deviceMetadataTopicFor(const std::string &cloud_topic)
+{
+  const size_t slash = cloud_topic.rfind('/');
+  const std::string ns = slash == std::string::npos ? "" : cloud_topic.substr(0, slash);
+  return ns + kDeviceMetadataTopic;
+}
+
 /**
  * @brief Fill one PCL point from frame data
  */
