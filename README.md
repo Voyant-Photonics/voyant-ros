@@ -128,6 +128,11 @@ sudo apt install -y ./voyant-api_*amd64.deb \
 sudo apt install ros-${ROS_DISTRO}-pcl-ros ros-${ROS_DISTRO}-rviz2
 ```
 
+> **Remove any installed `ros-$ROS_DISTRO-voyant-ros` first**
+> (`sudo apt remove ros-$ROS_DISTRO-voyant-ros`). Its message definitions take
+> precedence over the ones you build, and the driver and converters will silently
+> read and write the wrong `VoyantDeviceMetadata`.
+
 #### 4. Clone and build
 
 ```bash
@@ -249,74 +254,112 @@ or with RViz visualization
 ros2 launch voyant_ros sensor_launch.py use_rviz:=true # for rviz
 ```
 
-## Converting `.vynt` recordings to ROS2 bag format
+## Converting between `.vynt` recordings and ROS2 bags
 
-The configurations for ROS2 bag can be found in the `config/sensor_params.yaml` file. There are two ways you can run the conversion tool.
+`voyant_bin_to_mcap` converts a `.vynt` recording to an MCAP bag; `voyant_mcap_to_bin`
+converts one back. Both ship in the Debian package, so an installed release needs
+nothing built. Source the workspace first, exactly as for the driver — see
+[Source the ROS2 workspace](#1-source-the-ros2-workspace) — so the
+`VoyantDeviceMetadata` message resolves at runtime.
 
 > Recordings made with a pre-1.0.0 `voyant-api` must first be converted to the
 > `.vynt` format with the `voyant_recording_migrate` tool from the SDK.
 
-### 1. Using the binaries from `colcon build`
+### Config files
 
-After building `voyant_ros` with `colcon` from the workspace root (`~/ros2_ws`),
-set `bin_input` and `mcap_output` in `config/sensor_params.yaml` (both are empty
-by default), then source the environment and run the converter. Note the build
-directory is `build/voyant_ros` (package name, underscore), and the converters
-live in its `bin/` subdirectory.
+Each tool takes the path to a YAML config:
+
+| Config | Used by |
+| ------ | ------- |
+| `sensor_params.yaml` | `voyant_bin_to_mcap`, and the live driver |
+| `mcap_to_bin_params.yaml` | `voyant_mcap_to_bin` |
+
+The packaged copies live in `share/voyant_ros/config/` under the install prefix —
+`/opt/ros/$ROS_DISTRO/` for a released package — which is root-owned. Copy them
+somewhere writable rather than editing in place:
 
 ```bash
-cd ~/ros2_ws
-source /opt/ros/humble/setup.bash   # or your ROS 2 distro
-source install/setup.bash           # required for the VoyantDeviceMetadata message
-./build/voyant_ros/bin/voyant_bin_to_mcap src/voyant-ros/config/sensor_params.yaml
+cp /opt/ros/$ROS_DISTRO/share/voyant_ros/config/sensor_params.yaml \
+   /opt/ros/$ROS_DISTRO/share/voyant_ros/config/mcap_to_bin_params.yaml ~/
 ```
 
-### 2. Build the package using `cmake`
+Paths inside a config are resolved against the directory you run from, not against
+the config file — absolute paths are the safe choice.
+
+### `.vynt` → MCAP
+
+Set `bin_input` and `mcap_output` in `sensor_params.yaml`, then:
 
 ```bash
-cd ~/ros2_ws/src/voyant-ros
-source /opt/ros/humble/setup.bash   # or your ROS 2 distro
-mkdir -p build
-cd build
-cmake ..
-make
-./bin/voyant_bin_to_mcap ../config/sensor_params.yaml # path to your params yaml file
+ros2 run voyant_ros voyant_bin_to_mcap ~/sensor_params.yaml
 ```
 
-## Converting mcap files to `.vynt` format
+`mcap_output` is a directory, and rosbag2 refuses to write into one that already
+exists — delete it before re-running (see [Cleaning up](#cleaning-up)).
 
-You can only convert MCAP files with the correct data.
+### MCAP → `.vynt`
 
-> The clouds must carry the full driver field set and the MCAP must contain the
-> `/device_metadata` topic. `voyant_bin_to_mcap` writes both automatically; a live
-> `ros2 bag record` capture must include that topic alongside the points. MCAPs
-> recorded by a pre-1.0.0 driver are rejected — their point layout differs.
->
-> The rebuilt recording keeps the point data, the frame timeline and the sensor's
-> identity, but **not the per-frame sensor state**: a bag carries the points, not the
-> heartbeat behind them, so health, calibration, SDL settings and time-sync figures
-> are lost. Those frames report their state as absent rather than as zeros, which
-> would decode into plausible-looking readings (a zeroed temperature becomes
-> -273.15 °C). Record with `voyant_recorder` if you need the state preserved.
-
-**Build the tool:**
+Set `mcap_input` and `bin_output` in `mcap_to_bin_params.yaml`; `bin_output` must end
+in `.vynt`, and is overwritten in place if it already exists.
 
 ```bash
-# source ROS2 Humble
-source /opt/ros/humble/setup.bash
-# build with colcon
+ros2 run voyant_ros voyant_mcap_to_bin ~/mcap_to_bin_params.yaml
+```
+
+Only bags carrying the full driver field set and a `/device_metadata` topic convert.
+`voyant_bin_to_mcap` writes both automatically; a live `ros2 bag record` capture must
+include that topic alongside the points. Bags recorded by a pre-1.0.0 driver are
+rejected — their point layout differs.
+
+The rebuilt recording keeps the point data, the frame timeline and the sensor's
+identity, but **not the per-frame sensor state**: a bag carries the points, not the
+heartbeat behind them, so health, calibration, SDL settings and time-sync figures are
+lost. Those frames report their state as absent rather than as zeros, which would
+decode into plausible-looking readings (a zeroed temperature becomes -273.15 °C).
+Record with `voyant_recorder` if you need the state preserved.
+
+## Cleaning up
+
+colcon has no built-in `clean` verb — there is no equivalent of ROS 1's
+`catkin clean` unless you install the optional
+[`colcon-clean`](https://github.com/ruffsl/colcon-clean) extension. Removing the
+directories directly is the supported way.
+
+**Rebuild this package from scratch** (from the workspace root):
+
+```bash
+rm -rf build/voyant_ros install/voyant_ros
 colcon build --symlink-install --packages-select voyant_ros
-# Source the workspace (required for compiled VoyantDeviceMetadata.msg)
-source install/setup.bash
 ```
 
-Edit `config/mcap_to_bin_params.yaml` to set `mcap_input` and `bin_output`
-(both are empty by default; `bin_output` must end in `.vynt`).
+Mixing `--symlink-install` with a plain `colcon build` in the same directory fails
+with `failed to create symbolic link ... Is a directory`; deleting the two
+directories above clears it. For a full workspace reset, remove `build/`, `install/`
+and `log/` entirely — all three are regenerated by the next build.
 
-**Run the tool** (from the workspace root, `~/ros2_ws`):
+**Remove stale conversion output.** `mcap_output` is a bag directory and rosbag2
+will not write into one that already exists, so an unremoved directory fails the next
+run. A `.vynt` `bin_output` is overwritten in place and needs no cleanup.
 
 ```bash
-./build/voyant_ros/bin/voyant_mcap_to_bin src/voyant-ros/config/mcap_to_bin_params.yaml
+rm -rf <mcap_output>
+```
+
+**Remove an older in-repo `build/` directory.** Versions of this README before
+v1.0.0 documented building inside `src/voyant-ros/build` with plain `cmake`. That
+flow is no longer supported — a bare build tree cannot supply the message typesupport
+at runtime — and a leftover directory only invites running its stale binaries.
+
+```bash
+rm -rf src/voyant-ros/build src/voyant-ros/install
+```
+
+**Remove a system-installed package before building from source**, as covered in
+[build from source](#option-2-native--build-from-source) — its message definitions
+take precedence over your build.
+
+```bash
+sudo apt remove ros-$ROS_DISTRO-voyant-ros
 ```
 
 ## Configuring Foxglove for Pointcloud Visualization
