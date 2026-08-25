@@ -189,17 +189,26 @@ docker run -it --network=host voyant_ros2_container
 
 ## Running the package
 
-**Upgrading from a pre-1.0.0 driver:** the `point_format` parameter was removed —
-every published cloud now carries the full field set. Delete the key from existing
-param files: unrecognized ROS parameters in a params file are silently ignored, so
-a stale `point_format` entry has no effect and only causes confusion.
+**Upgrading from a pre-1.0.0 driver:** two parameters changed, and existing param
+files need editing:
+
+- `point_format` was **removed** — every published cloud now carries the full field
+  set. The live node ignores an unrecognized key, so a stale entry is only confusing,
+  but delete it anyway.
+- `valid_only_filter` was **renamed** to `diagnostic_mode`, inverting its sense: set
+  it `true` to include invalid returns rather than to exclude them. `voyant_bin_to_mcap`
+  and `voyant_mcap_to_bin` read the YAML directly and exit if the key is missing, so
+  this rename is not optional for them. The live node now drops invalid returns by
+  default, where before it kept them.
 
 `VoyantDeviceMetadata` also changed: the four `*_version_hash` integers became
 readable strings. `/device_metadata` now publishes `api_version` and
 `interface_contract_version` (the `voyant-api` library this driver links, and the
-sensor wire protocol it was built for) plus `firmware_version` and `hdl_version`
-read from the sensor itself. The firmware and HDL fields are empty for a recording
-converted from the pre-1.0.0 format, which stored no sensor state.
+sensor wire protocol it was built for), `firmware_version` and `hdl_version` read
+from the sensor itself, `product_id` and `serial_number` behind the device ID, and
+`recording_api_version` — the version that wrote the source recording, set only by
+`voyant_bin_to_mcap`. Everything read from the sensor is unset for a frame that
+carries no state, such as a recording converted from the pre-1.0.0 format.
 
 > 🚧 **Temporary fix (Carbon sensor)**
 >
@@ -280,9 +289,15 @@ You can only convert MCAP files with the correct data.
 
 > The clouds must carry the full driver field set and the MCAP must contain the
 > `/device_metadata` topic. `voyant_bin_to_mcap` writes both automatically; a live
-> `ros2 bag record` capture must include that topic alongside the points.
-> The rebuilt recording keeps the point data and frame timeline, but not the
-> original device identity or sensor state.
+> `ros2 bag record` capture must include that topic alongside the points. MCAPs
+> recorded by a pre-1.0.0 driver are rejected — their point layout differs.
+>
+> The rebuilt recording keeps the point data, the frame timeline and the sensor's
+> identity, but **not the per-frame sensor state**: a bag carries the points, not the
+> heartbeat behind them, so health, calibration, SDL settings and time-sync figures
+> are lost. Those frames report their state as absent rather than as zeros, which
+> would decode into plausible-looking readings (a zeroed temperature becomes
+> -273.15 °C). Record with `voyant_recorder` if you need the state preserved.
 
 **Build the tool:**
 

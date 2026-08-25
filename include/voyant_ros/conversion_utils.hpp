@@ -18,6 +18,11 @@
 namespace voyant_ros
 {
 
+/// Device-metadata topic as it appears in a bag. The driver publishes the relative
+/// name, which resolves to this outside a namespace; readers substring-match it so a
+/// namespaced capture still hits.
+inline constexpr const char *kDeviceMetadataTopic = "/device_metadata";
+
 /**
  * @brief Fill one PCL point from frame data
  */
@@ -98,9 +103,9 @@ inline sensor_msgs::msg::PointCloud2 convertFrameToPointCloud2(const VoyantFrame
 /**
  * @brief Build the device metadata message that accompanies a point cloud stream
  *
- * The API and interface-contract versions describe the linked library; the firmware
- * and HDL versions are the sensor's own and stay empty for a frame without state
- * (a recording converted from the pre-v1.0.0 format).
+ * The API and interface-contract versions describe the linked library; everything
+ * else is the sensor's own and comes from the frame's state, so it stays unset for a
+ * frame that carries none. product_id and serial_number are device_id as data.
  */
 inline voyant_ros::msg::VoyantDeviceMetadata deviceMetadataFromFrame(const VoyantFrame &frame,
                                                                      const SensorParams &config)
@@ -114,6 +119,8 @@ inline voyant_ros::msg::VoyantDeviceMetadata deviceMetadataFromFrame(const Voyan
   if(std::optional<SensorState> state = frame.sensorState())
   {
     const DeviceInfo &device = state->device;
+    metadata.product_id = static_cast<uint8_t>(device.product_id);
+    metadata.serial_number = device.serial_number;
     metadata.firmware_version = std::to_string(device.mcu_version_major) + "." +
                                 std::to_string(device.mcu_version_minor) + "." +
                                 std::to_string(device.mcu_version_patch);
@@ -128,10 +135,11 @@ inline voyant_ros::msg::VoyantDeviceMetadata deviceMetadataFromFrame(const Voyan
 /**
  * @brief Convert PointCloud2 back to a recordable VoyantFrame
  *
- * The rebuilt frame is a synthetic frame: it keeps the cloud's timeline
- * (timestamps and frame index) but cannot claim the original device identity,
- * and carries no sensor state. combine_method and user_data are not carried
- * through the point cloud, so they are zeroed.
+ * The rebuilt frame keeps the cloud's timeline and the sensor's identity, but declares
+ * no state: a bag carries the points, not the per-frame heartbeat behind them, so the
+ * recording reports "none was recorded" rather than defaults that read as measurements.
+ * combine_method and user_data are internal-only, so the cloud has no field for
+ * them and they rebuild as zero.
  */
 inline VoyantFrame convertPointCloud2ToFrame(const sensor_msgs::msg::PointCloud2 &cloud,
                                              const voyant_ros::msg::VoyantDeviceMetadata &metadata)
@@ -186,12 +194,14 @@ inline VoyantFrame convertPointCloud2ToFrame(const sensor_msgs::msg::PointCloud2
     points.push_back(p);
   }
 
-  VoyantFrame::SyntheticFrameDesc desc;
+  VoyantFrame::StatelessFrameDesc desc;
+  desc.source = static_cast<ProductId>(metadata.product_id);
+  desc.serialNumber = metadata.serial_number;
   desc.timestampSeconds = cloud.header.stamp.sec;
   desc.timestampNanoseconds = static_cast<int32_t>(cloud.header.stamp.nanosec);
   desc.frameIndex = frame_index;
 
-  std::optional<VoyantFrame> frame = VoyantFrame::synthetic(std::move(points), desc);
+  std::optional<VoyantFrame> frame = VoyantFrame::stateless(std::move(points), desc);
   if(!frame)
   {
     throw std::runtime_error(

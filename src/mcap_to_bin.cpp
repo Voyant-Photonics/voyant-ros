@@ -7,6 +7,7 @@
 #include "voyant_ros/conversion_utils.hpp"
 #include <iomanip>
 #include <iostream>
+#include <map>
 #include <voyant_data_recorder.hpp>
 #include <yaml-cpp/yaml.h>
 
@@ -76,7 +77,7 @@ bool McapPlayback::validate()
     auto bag_message = reader_->read_next();
 
     // Check for metadata message
-    if(bag_message->topic_name.find("device_metadata") != std::string::npos && !metadata_found)
+    if(bag_message->topic_name.find(kDeviceMetadataTopic) != std::string::npos && !metadata_found)
     {
       try
       {
@@ -84,11 +85,27 @@ bool McapPlayback::validate()
         metadata_serializer.deserialize_message(&serialized_msg, &metadata_);
         metadata_found = true;
 
-        std::cout << "✓ Found metadata - Device ID: " << metadata_.device_id << std::endl;
+        // api_version arrived with the v1.0.0 message; without it the bag predates this
+        // driver, and its clouds carry a point layout this build cannot rebuild.
+        if(metadata_.api_version.empty())
+        {
+          std::cerr << "✗ Metadata has no api_version: this MCAP was recorded by a "
+                       "pre-1.0.0 driver and cannot be converted"
+                    << std::endl;
+          return false;
+        }
+
+        std::cout << "✓ Found metadata - Device ID: " << metadata_.device_id << " (recorded with "
+                  << "voyant-api " << metadata_.api_version << ")" << std::endl;
       }
       catch(const std::exception &e)
       {
-        std::cerr << "✗ Failed to parse metadata: " << e.what() << std::endl;
+        // A pre-1.0.0 bag carries four version *hashes* where this build expects
+        // strings, so it fails here rather than at the api_version check below.
+        std::cerr << "✗ Failed to parse metadata: " << e.what()
+                  << "\n  The MCAP was most likely recorded by a pre-1.0.0 driver, whose "
+                     "VoyantDeviceMetadata and point layout this build cannot read."
+                  << std::endl;
         return false;
       }
     }
@@ -148,6 +165,15 @@ bool McapPlayback::processFrames()
   if(!validated_)
   {
     std::cerr << "Do not process frames without first validating" << std::endl;
+    return false;
+  }
+
+  // The recorder reports only valid/invalid, so check the extension here to have a
+  // reason to give.
+  if(config_.bin_output.size() < 5 ||
+     config_.bin_output.compare(config_.bin_output.size() - 5, 5, ".vynt") != 0)
+  {
+    std::cerr << "Output path must end in .vynt: " << config_.bin_output << std::endl;
     return false;
   }
 
@@ -233,38 +259,44 @@ bool McapPlayback::processFrames()
 
 bool McapPlayback::contains_valid_format(const sensor_msgs::msg::PointCloud2 &cloud)
 {
-  // Define all required fields for conversion to bin
-  std::set<std::string> required_fields = {"x",
-                                           "y",
-                                           "z",
-                                           "v",
-                                           "snr",
-                                           "drop_reason",
-                                           "timestamp_nsecs",
-                                           "point_idx",
-                                           "calibrated_reflectance",
-                                           "frame_index"};
+  // Types are checked because PCL maps a field only when name and datatype both match,
+  // and silently leaves the destination zeroed otherwise.
+  using Field = sensor_msgs::msg::PointField;
+  const std::map<std::string, uint8_t> required_fields = {{"x", Field::FLOAT32},
+                                                          {"y", Field::FLOAT32},
+                                                          {"z", Field::FLOAT32},
+                                                          {"v", Field::FLOAT32},
+                                                          {"snr", Field::FLOAT32},
+                                                          {"drop_reason", Field::UINT8},
+                                                          {"timestamp_nsecs", Field::UINT32},
+                                                          {"point_idx", Field::UINT32},
+                                                          {"calibrated_reflectance", Field::FLOAT32},
+                                                          {"frame_index", Field::UINT32}};
 
-  std::set<std::string> found_fields;
-
-  // Collect all field names from the point cloud
+  std::map<std::string, uint8_t> found_fields;
   for(const auto &field : cloud.fields)
   {
-    found_fields.insert(field.name);
+    found_fields.emplace(field.name, field.datatype);
   }
 
-  // Check if all required fields are present
-  bool missing_field = false;
-  for(const auto &required_field : required_fields)
+  bool valid = true;
+  for(const auto &[name, datatype] : required_fields)
   {
-    if(found_fields.find(required_field) == found_fields.end())
+    auto found = found_fields.find(name);
+    if(found == found_fields.end())
     {
-      missing_field = true;
-      std::cout << "PointCloud missing required field: " << required_field << std::endl;
+      std::cout << "PointCloud missing required field: " << name << std::endl;
+      valid = false;
+    }
+    else if(found->second != datatype)
+    {
+      std::cout << "PointCloud field '" << name << "' has type " << static_cast<int>(found->second)
+                << ", expected " << static_cast<int>(datatype) << std::endl;
+      valid = false;
     }
   }
 
-  return !missing_field;
+  return valid;
 }
 
 } // namespace voyant_ros

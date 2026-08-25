@@ -150,6 +150,7 @@ export default function script(
         row_step: number;
         point_step: number;
         data: Uint8Array;
+        fields: { name: string; offset: number }[];
         header: {
             stamp: {
                 sec: number;
@@ -186,12 +187,19 @@ export default function script(
         const {
             data,
             point_step: originalStride,
+            fields,
             header: ros_header,
         } = event.message;
+
+        const valueField = fields.find((f) => f.name === "v");
+        if (!valueField) {
+            throw new Error("PointCloud2 has no 'v' field");
+        }
 
         return processROS2PointCloud(
             data,
             originalStride,
+            valueField.offset,
             ros_header,
             globalVars,
         );
@@ -305,6 +313,7 @@ function createXYZRGBAPointCloud(
 function processROS2PointCloud(
     data: Uint8Array,
     originalStride: number,
+    valueOffset: number,
     ros_header: {
         stamp: {
             sec: number;
@@ -315,7 +324,6 @@ function processROS2PointCloud(
     globalVars: GlobalVariables,
 ) {
     const XYZ_OFFSET = 0;
-    const DOP_OFFSET = 16;
     const numPoints = data.length / originalStride;
 
     // Extract XYZ and Doppler values
@@ -324,7 +332,7 @@ function processROS2PointCloud(
         originalStride,
         numPoints,
         XYZ_OFFSET,
-        DOP_OFFSET,
+        valueOffset,
     );
 
     // Map Doppler values to RGB colors
