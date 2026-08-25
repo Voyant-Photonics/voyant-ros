@@ -213,7 +213,8 @@ changed, and existing param files need editing:
 - `mcap_to_bin_params.yaml` gained a **`topic_name`** key naming the bag's point-cloud
   topic. Add it to an existing file. A namespaced capture resolves too — `/point_cloud`
   finds `/front/point_cloud` — but if a bag holds more than one match (two sensors, say)
-  the converter refuses to guess: give it the full topic.
+  the converter refuses to guess: give it the full topic, and the device metadata is
+  taken from that topic's namespace.
 
 `VoyantDeviceMetadata` also changed: the four `*_version_hash` integers became
 readable strings. `/device_metadata` now publishes `api_version` and
