@@ -57,7 +57,15 @@ int main(int argc, char *argv[])
   converter_options.input_serialization_format = converter.config.serialization_format;
   converter_options.output_serialization_format = converter.config.serialization_format;
 
-  writer->open(storage_options, converter_options);
+  try
+  {
+    writer->open(storage_options, converter_options);
+  }
+  catch(const std::exception &e)
+  {
+    std::cerr << "Failed to open the output bag: " << e.what() << std::endl;
+    return EXIT_FAILURE;
+  }
 
   rosbag2_storage::TopicMetadata topic_metadata;
   topic_metadata.name = converter.config.topic_name;
