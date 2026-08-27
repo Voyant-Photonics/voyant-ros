@@ -22,6 +22,8 @@ struct McapConfig
 {
   std::string mcap_input;
   std::string bin_output;
+  /// Point-cloud topic to read; must match the `topic_name` the bag was written with.
+  std::string topic_name;
 };
 
 /**
@@ -57,8 +59,12 @@ private:
   rosbag2_cpp::ConverterOptions converter_options_;
   voyant_ros::msg::VoyantDeviceMetadata metadata_;
   bool validated_;
+  /// Exact bag topics resolved by validate(); both passes compare against these.
+  std::string cloud_topic_;
+  std::string metadata_topic_;
 
   void openReader();
+  bool resolveTopics();
   bool contains_valid_format(const sensor_msgs::msg::PointCloud2 &cloud);
 };
 

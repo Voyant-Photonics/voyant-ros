@@ -27,7 +27,6 @@ on:
 # Asset naming in voyant-sdk releases: voyant-api-debian-<tag>.tar.gz
 env:
   SDK_REPO: Voyant-Photonics/voyant-sdk
-  CAPNP_VERSION: '1.1.0'
 
 # Containers (ros:*, osrf/ros:*) can default to dash; force bash so `set -o
 # pipefail` and other bashisms work in every run step.
@@ -97,7 +96,7 @@ jobs:
           fi
 
           # Verify the release actually ships both debs we need (fail fast,
-          # before any container/Cap'n Proto work). Runners are amd64.
+          # before any container work). Runners are amd64.
           ARCH="$(dpkg --print-architecture)"
           wget -q -O /tmp/voyant-api.tar.gz "$TARBALL_URL"
           mkdir -p /tmp/voyant-api-extract
@@ -148,19 +147,8 @@ jobs:
           apt-get update
           apt-get install -y --no-install-recommends \
             build-essential debhelper python3-bloom python3-rosdep \
-            cmake g++ pkg-config curl wget ca-certificates fakeroot \
+            cmake g++ pkg-config wget ca-certificates fakeroot \
             python3 libwayland-dev file
-
-      - name: Install Cap'n Proto from source
-        run: |
-          cd /tmp
-          curl -fsSL -O "https://capnproto.org/capnproto-c++-${CAPNP_VERSION}.tar.gz"
-          tar zxf "capnproto-c++-${CAPNP_VERSION}.tar.gz"
-          cd "capnproto-c++-${CAPNP_VERSION}"
-          ./configure
-          make -j"$(nproc)"
-          make install
-          ldconfig
 
       - name: Download & install voyant-api (${{ needs.config.outputs.sdk_version }})
         run: |
@@ -210,9 +198,6 @@ jobs:
             --os-name ubuntu \
             --os-version "${{ matrix.os_version }}" \
             --ros-distro "${{ matrix.ros_distro }}"
-          # Cap'n Proto is installed from source (not an apt package), so let
-          # dpkg-shlibdeps ignore the missing dependency info for libcapnp.
-          sed -i '/^override_dh_shlibdeps:/,/^$/s/dh_shlibdeps/dh_shlibdeps --dpkg-shlibdeps-params=--ignore-missing-info/' debian/rules
           fakeroot debian/rules binary
 
       - name: Collect artifacts
@@ -251,18 +236,7 @@ jobs:
         run: |
           apt-get update
           apt-get install -y --no-install-recommends \
-            curl wget ca-certificates python3 build-essential
-
-      - name: Install Cap'n Proto from source
-        run: |
-          cd /tmp
-          curl -fsSL -O "https://capnproto.org/capnproto-c++-${CAPNP_VERSION}.tar.gz"
-          tar zxf "capnproto-c++-${CAPNP_VERSION}.tar.gz"
-          cd "capnproto-c++-${CAPNP_VERSION}"
-          ./configure
-          make -j"$(nproc)"
-          make install
-          ldconfig
+            wget ca-certificates python3
 
       - name: Download & install voyant-api (${{ needs.config.outputs.sdk_version }})
         run: |
@@ -304,7 +278,7 @@ jobs:
           fi
 
           # Start the simulator (background).
-          voyant_carbon_simulator --bind-addr 127.0.0.1:0 --group-addr 239.255.48.84:5678 \
+          voyant_simulator --bind-addr 127.0.0.1:0 --group-addr 239.255.48.84:5678 \
             > "$LOGDIR/sim.log" 2>&1 &
           SIM_PID=$!
           sleep 3

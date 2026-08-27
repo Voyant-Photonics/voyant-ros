@@ -25,25 +25,14 @@
     # must use "multicast" so this node can receive the shared stream. Exactly one primary per sensor.
     observer_only: false
 
-    ## Shared parameters
-    # Point format selection
-    # - 0 = UNKNOWN (will throw error)
-    # - 1 = MDL_STANDARD (recommended) - x,y,z,v,snr,drop_reason,timestamp,index
-    # - 2 = MDL_EXTENDED - adds calibrated_reflectance, noise_mean_estimate, min_ramp_snr, frame_index
-    point_format: 1
-
+    ## Output parameters
     # timestamp_mode[optional]
     # - 0 = TIME_FROM_SENSOR
     # - 1 = TIME_FROM_ROS
     timestamp_mode: 0
 
-    # Enable Single Point Noise filter (+ other filtering of invalid points)
-    valid_only_filter: true
+    # Include invalid returns (with their drop_reason) instead of valid points only:
+    # runs the client in diagnostic mode.
+    diagnostic_mode: false
 
-    ## The below params are shared with the bin_to_mcap conversion
-    frame_id: 'voyant_sensor'
-    bin_input: '' # Path to your bin file
-    mcap_output: '' # Desired output path
-    storage_id: 'mcap' # sqlite3/mcap
-    serialization_format: 'cdr'
-    topic_name: '/point_cloud' # Changing this will break the foxglove multi colormap visualization,
+    frame_id: 'voyant_sensor' # frame_id stamped on every published cloud

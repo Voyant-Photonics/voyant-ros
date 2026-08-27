@@ -15,15 +15,23 @@ namespace voyant_ros
 
 /**
  * @brief Point structure for the Voyant LiDAR sensor
+ * This (with the VoyantDeviceMetadata msg) can be used to rebuild .vynt recordings
+ *
+ * x/y/z are NaN for a return the sensor never measured a range for, so clouds are
+ * published with is_dense = false. Such a point still carries its drop_reason and
+ * its scan cell in azimuth_idx/elevation_idx.
  */
 struct EIGEN_ALIGN16 VoyantPoint
 {
-  PCL_ADD_POINT4D; // This adds x, y, z, and padding
-  float v;         // Radial velocity
-  float snr;       // Signal-to-noise ratio
-  uint8_t drop_reason;
-  int32_t timestamp_nsecs;
-  uint32_t point_idx;
+  PCL_ADD_POINT4D;              // This adds x, y, z, and padding
+  float v;                      // Radial velocity (m/s, positive moving away)
+  float snr;                    // Linear (not dB) signal-to-noise ratio
+  uint8_t drop_reason;          // 1 = valid return, any other value = dropped
+  uint32_t timestamp_nsecs;     // Nanoseconds since frame start
+  uint16_t azimuth_idx;         // Scan column index, 0 at the leftmost column
+  uint16_t elevation_idx;       // Elevation line index, 0 at the topmost line
+  float calibrated_reflectance; // Calibrated reflectance, already in dB
+  uint32_t frame_index;         // Device frame counter, from the frame header
 
   inline VoyantPoint()
   {
@@ -33,42 +41,9 @@ struct EIGEN_ALIGN16 VoyantPoint
     snr = 0.0f;
     drop_reason = 0;
     timestamp_nsecs = 0;
-    point_idx = 0;
-  }
-  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-};
-
-/**
- * @brief Extended point structure with additional sensor fields from MDL sensors
- * This (with the VoyantDeviceMetadata msg) can be used to reconstruct Voyant v0.3.0 binary logs
- */
-struct EIGEN_ALIGN16 VoyantPointMdlExtended
-{
-  PCL_ADD_POINT4D; // This adds x, y, z, and padding
-  float v;         // Radial velocity
-  float snr;       // Signal-to-noise ratio
-  uint8_t drop_reason;
-  int32_t timestamp_nsecs;
-  uint32_t point_idx;
-  // Extended fields from PointDataWrapper
-  float calibrated_reflectance;
-  float noise_mean_estimate;
-  float min_ramp_snr;
-  // Additional field from frame header
-  uint32_t frame_index;
-
-  inline VoyantPointMdlExtended()
-  {
-    x = y = z = 0.0f;
-    data[3] = 1.0f; // Set padding to 1 to prevent undefined behavior.
-    v = 0.0f;
-    snr = 0.0f;
-    drop_reason = 0;
-    timestamp_nsecs = 0;
-    point_idx = 0;
+    azimuth_idx = 0;
+    elevation_idx = 0;
     calibrated_reflectance = 0.0f;
-    noise_mean_estimate = 0.0f;
-    min_ramp_snr = 0.0f;
     frame_index = 0;
   }
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -76,23 +51,13 @@ struct EIGEN_ALIGN16 VoyantPointMdlExtended
 
 } // namespace voyant_ros
 
-// Register point types with PCL
+// Register point type with PCL
 POINT_CLOUD_REGISTER_POINT_STRUCT(
     voyant_ros::VoyantPoint,
-    (float, x, x)(float, y, y)(float, z, z)(float, v, v)(float, snr, snr)(
-        uint8_t,
-        drop_reason,
-        drop_reason)(int32_t, timestamp_nsecs, timestamp_nsecs)(uint32_t, point_idx, point_idx))
-
-POINT_CLOUD_REGISTER_POINT_STRUCT(
-    voyant_ros::VoyantPointMdlExtended,
-    (float, x, x)(float, y, y)(float, z, z)(float, v, v)(float, snr, snr)(
-        uint8_t,
-        drop_reason,
-        drop_reason)(int32_t, timestamp_nsecs, timestamp_nsecs)(uint32_t, point_idx, point_idx)(
+    (float, x, x)(float, y, y)(float, z, z)(float, v, v)(float, snr, snr)(uint8_t, drop_reason, drop_reason)(
+        uint32_t,
+        timestamp_nsecs,
+        timestamp_nsecs)(uint16_t, azimuth_idx, azimuth_idx)(uint16_t, elevation_idx, elevation_idx)(
         float,
         calibrated_reflectance,
-        calibrated_reflectance)(float, noise_mean_estimate, noise_mean_estimate)(
-        float,
-        min_ramp_snr,
-        min_ramp_snr)(uint32_t, frame_index, frame_index))
+        calibrated_reflectance)(uint32_t, frame_index, frame_index))

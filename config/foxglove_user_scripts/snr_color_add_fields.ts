@@ -90,15 +90,23 @@ function mapSnrToRgb(
     minSnr: number,
     maxSnr: number,
 ): number[][] {
+    // One pass: a spread (Math.min(...snrValues)) overflows the call stack on a full frame.
+    let dataMin = Infinity;
+    let dataMax = -Infinity;
+    for (const value of snrValues) {
+        if (value < dataMin) dataMin = value;
+        if (value > dataMax) dataMax = value;
+    }
+
     // Auto-range if both bounds are set to 0
     if (minSnr == 0.0 && maxSnr == 0.0) {
-        minSnr = Math.min(...snrValues);
-        maxSnr = Math.max(...snrValues);
+        minSnr = dataMin;
+        maxSnr = dataMax;
     }
 
     // Find actual min/max within bounds
-    const validMin = Math.max(minSnr, Math.min(...snrValues));
-    const validMax = Math.min(maxSnr, Math.max(...snrValues));
+    const validMin = Math.max(minSnr, dataMin);
+    const validMax = Math.min(maxSnr, dataMax);
     const range = validMax - validMin;
 
     return snrValues.map((value) => {
@@ -155,6 +163,7 @@ export default function script(
         row_step: number;
         point_step: number;
         data: Uint8Array;
+        fields: { name: string; offset: number }[];
         header: {
             stamp: {
                 sec: number;
@@ -164,17 +173,6 @@ export default function script(
         };
     }
 
-    interface APIPointCloudMessage {
-        point_stride: number;
-        data: Uint8Array;
-        timestamp: {
-            sec: number;
-            nsec: number;
-        };
-        frame_id: string;
-        fields: any[];
-    }
-
     // Type guard functions
     // This is used because TypeScript can't infer the type of the message during compilation, but we can check it at runtime
     // Ref: https://www.typescriptlang.org/docs/handbook/advanced-types.html#using-the-in-operator
@@ -182,27 +180,27 @@ export default function script(
         return "row_step" in message && "point_step" in message;
     }
 
-    function isAPIPointCloud(message: any): message is APIPointCloudMessage {
-        return "point_stride" in message;
-    }
-
     if (isROS2PointCloud(event.message)) {
         // Process ROS2 point cloud message
         const {
             data,
             point_step: originalStride,
+            fields,
             header: ros_header,
         } = event.message;
+
+        const valueField = fields.find((f) => f.name === "snr");
+        if (!valueField) {
+            throw new Error("PointCloud2 has no 'snr' field");
+        }
 
         return processROS2PointCloud(
             data,
             originalStride,
+            valueField.offset,
             ros_header,
             globalVars,
         );
-    } else if (isAPIPointCloud(event.message)) {
-        // Process API point cloud message
-        return processAPIPointCloud(event.message, globalVars);
     } else {
         throw new Error("Unknown point cloud message format");
     }
@@ -311,6 +309,7 @@ function createXYZRGBAPointCloud(
 function processROS2PointCloud(
     data: Uint8Array,
     originalStride: number,
+    valueOffset: number,
     ros_header: {
         stamp: {
             sec: number;
@@ -321,7 +320,6 @@ function processROS2PointCloud(
     globalVars: GlobalVariables,
 ) {
     const XYZ_OFFSET = 0;
-    const SNR_OFFSET = 20;
     const numPoints = data.length / originalStride;
 
     // Extract XYZ and SNR values
@@ -330,7 +328,7 @@ function processROS2PointCloud(
         originalStride,
         numPoints,
         XYZ_OFFSET,
-        SNR_OFFSET,
+        valueOffset,
     );
 
     // Convert SNR values to RGB colors
@@ -355,79 +353,6 @@ function processROS2PointCloud(
             nsec: ros_header.stamp.nsec,
         },
         frame_id: ros_header.frame_id,
-        pose: {
-            position: { x: 0, y: 0, z: 0 },
-            orientation: { x: 0, y: 0, z: 0, w: 1 },
-        },
-        point_stride: XYZRGBA_STRIDE,
-        fields: XYZRGBA_FIELDS,
-        data: coloredPointCloud,
-    };
-}
-
-/**
- * Processes an API PointCloud message and adds color information based on SNR values
- * @param api_message API PointCloud message
- * @param globalVars Global variables for SNR bounds
- * @returns Modified PointCloud message with color information
- */
-function processAPIPointCloud(
-    api_message: {
-        data: Uint8Array;
-        point_stride: number;
-        timestamp: {
-            sec: number;
-            nsec: number;
-        };
-        frame_id: string;
-        fields: any[];
-    },
-    globalVars: GlobalVariables,
-) {
-    const XYZ_OFFSET = 8;
-    const SNR_OFFSET = 24;
-
-    // Get the original point cloud data as a Uint8Array
-    const {
-        data,
-        point_stride: old_strid,
-        timestamp: ts,
-        frame_id: fid,
-    } = api_message;
-
-    const numPoints = Math.floor(data.length / old_strid);
-
-    // Extract XYZ and SNR values
-    const { xyz, snrValues } = extractXYZAndSNR(
-        data,
-        old_strid,
-        numPoints,
-        XYZ_OFFSET,
-        SNR_OFFSET,
-    );
-
-    // Convert SNR values to RGB colors
-    const rgbColors = mapSnrToRgb(
-        colorMap,
-        snrValues,
-        globalVars.min_snr_bound,
-        globalVars.max_snr_bound,
-    );
-
-    // Create the new point cloud data with added color information
-    const coloredPointCloud = createXYZRGBAPointCloud(
-        xyz,
-        rgbColors,
-        numPoints,
-    );
-
-    // Return the modified point cloud message
-    return {
-        timestamp: {
-            sec: ts.sec,
-            nsec: ts.nsec,
-        },
-        frame_id: fid,
         pose: {
             position: { x: 0, y: 0, z: 0 },
             orientation: { x: 0, y: 0, z: 0, w: 1 },

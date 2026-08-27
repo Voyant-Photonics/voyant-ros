@@ -8,3 +8,6 @@ log
 # bloom-generate outputs
 /debian/
 /.obj-*/
+
+# conversion test output
+*.vynt

@@ -10,7 +10,6 @@
 #include <rosbag2_cpp/writer.hpp>
 #include <rosbag2_storage/storage_options.hpp>
 #include <string>
-#include <voyant_frame_wrapper.hpp>
 #include <voyant_playback.hpp>
 
 namespace voyant_ros
@@ -18,7 +17,7 @@ namespace voyant_ros
 
 /**
  * @class Bin2Mcap
- * @brief Offline .bin to .mcap converter
+ * @brief Offline .vynt recording to .mcap converter
  */
 class Bin2Mcap
 {
@@ -39,7 +38,7 @@ public:
    * @param frame The Voyant frame
    * @return sensor_msgs::msg::PointCloud2 The ROS2 point cloud message
    */
-  sensor_msgs::msg::PointCloud2 pointDatatoRosMsg(const VoyantFrameWrapper frame);
+  sensor_msgs::msg::PointCloud2 pointDatatoRosMsg(const VoyantFrame &frame);
 
   /**
    * @brief Load conversion parameters from YAML file

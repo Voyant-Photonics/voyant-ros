@@ -1,0 +1,22 @@
+# Copyright (c) 2024-2025 Voyant Photonics, Inc.
+#
+# This example code is licensed under the MIT License.
+# See the LICENSE file in the repository root for full license text.
+
+# These parameters are used in the voyant .vynt -> MCAP conversion
+
+bin_input: '' # Path to your .vynt recording
+mcap_output: '' # Desired output path (a directory; delete it first to re-run)
+topic_name: '/point_cloud' # The foxglove colormap scripts subscribe to this literal topic
+frame_id: 'voyant_sensor' # frame_id stamped on every published cloud
+storage_id: 'mcap' # sqlite3/mcap
+serialization_format: 'cdr'
+
+# timestamp_mode
+# - 0 = TIME_FROM_SENSOR
+# - 1 = TIME_FROM_ROS
+timestamp_mode: 0
+
+# Carry the recording's invalid returns (with their drop_reason) into the bag instead
+# of valid points only.
+diagnostic_mode: false

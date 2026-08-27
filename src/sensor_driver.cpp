@@ -67,20 +67,18 @@ void VoyantSensorDriver::getParams()
   this->declare_parameter<std::string>("interface_address", "192.168.1.100");
   this->declare_parameter<std::string>("stream_transport", "unicast");
   this->declare_parameter<bool>("observer_only", false);
-  this->declare_parameter<bool>("valid_only_filter", false);
+  this->declare_parameter<bool>("diagnostic_mode", false);
   this->declare_parameter<int>("timestamp_mode", 0); // Default to TIME_FROM_SENSOR (0)
-  this->declare_parameter<std::string>("frame_id", "lidar_sensor");
-  this->declare_parameter<int>("point_format", 1); // Default to MDL_STANDARD (1)
+  this->declare_parameter<std::string>("frame_id", "voyant_sensor");
 
   config_.binding_address = this->get_parameter("binding_address").as_string();
   config_.multicast_group = this->get_parameter("multicast_group").as_string();
   config_.interface_address = this->get_parameter("interface_address").as_string();
   config_.stream_transport = this->get_parameter("stream_transport").as_string();
   config_.observer_only = this->get_parameter("observer_only").as_bool();
-  config_.valid_only_filter = this->get_parameter("valid_only_filter").as_bool();
+  config_.diagnostic_mode = this->get_parameter("diagnostic_mode").as_bool();
   config_.timestamp_mode = this->get_parameter("timestamp_mode").as_int();
   config_.lidar_frame_id = this->get_parameter("frame_id").as_string();
-  config_.point_format = static_cast<PointFormat>(this->get_parameter("point_format").as_int());
 }
 
 void VoyantSensorDriver::initialize()
@@ -92,9 +90,6 @@ void VoyantSensorDriver::initialize()
   try
   {
     RCLCPP_INFO(get_logger(), "[+] Connecting to sensor: %s", config_.binding_address.c_str());
-    RCLCPP_INFO(get_logger(),
-                "[+] Using point format: %s",
-                pointFormatToString(config_.point_format).c_str());
 
     CarbonConfig carbon_cfg;
     carbon_cfg.setBindAddr(config_.binding_address)
@@ -102,7 +97,7 @@ void VoyantSensorDriver::initialize()
         .setInterfaceAddr(config_.interface_address)
         .setStreamTransport(parseStreamTransport(config_.stream_transport, get_logger()))
         .setObserverOnly(config_.observer_only)
-        .setKeepInvalidPoints(!config_.valid_only_filter);
+        .setDiagnosticMode(config_.diagnostic_mode);
 
     client_ = std::make_shared<CarbonClient>(carbon_cfg);
 
@@ -114,11 +109,9 @@ void VoyantSensorDriver::initialize()
 
     while(client_->isRunning() && !CarbonClient::isTerminated())
     {
-      if(client_->tryReceiveFrame())
+      if(auto frame = client_->tryReceiveFrame())
       {
-        VoyantFrameWrapper &frame = client_->latestFrame();
-        const VoyantHeaderWrapper header_msg = frame.header();
-        RCLCPP_INFO(get_logger(), "[+] Connected to sensor: %s", header_msg.deviceId().c_str());
+        RCLCPP_INFO(get_logger(), "[+] Connected to sensor: %s", frame->deviceId().c_str());
 
         return; // Successful connection
       }
@@ -133,9 +126,9 @@ void VoyantSensorDriver::initialize()
   }
 }
 
-sensor_msgs::msg::PointCloud2 VoyantSensorDriver::pointDatatoRosMsg(VoyantFrameWrapper &frame)
+sensor_msgs::msg::PointCloud2 VoyantSensorDriver::pointDatatoRosMsg(const VoyantFrame &frame)
 {
-  return convertFrameByFormat(frame, config_);
+  return convertFrameToPointCloud2(frame, config_);
 }
 
 void VoyantSensorDriver::publishPointCloud()
@@ -146,28 +139,26 @@ void VoyantSensorDriver::publishPointCloud()
     bool frame_received = false;
     try
     {
-      if(client_->tryReceiveFrame())
+      if(auto frame = client_->tryReceiveFrame())
       {
-        VoyantFrameWrapper &frame = client_->latestFrame();
-        sensor_msgs::msg::PointCloud2 cloud_msg = this->pointDatatoRosMsg(frame);
+        sensor_msgs::msg::PointCloud2 cloud_msg = this->pointDatatoRosMsg(*frame);
         points_pub->publish(cloud_msg);
         frame_received = true;
         if(!published_metadata)
         {
           // Create and publish static metadata message
-          voyant_ros::msg::VoyantDeviceMetadata metadata;
+          voyant_ros::msg::VoyantDeviceMetadata metadata = deviceMetadataFromFrame(*frame, config_);
           metadata.header.stamp = this->now();
-          metadata.header.frame_id = config_.lidar_frame_id;
-          metadata.device_id = frame.header().deviceId();
-          metadata.proto_version_hash = frame.header().protoVersion().toU32Hash();
-          metadata.api_version_hash = frame.header().apiVersion().toU32Hash();
-          metadata.firmware_version_hash = frame.header().firmwareVersion().toU32Hash();
-          metadata.hdl_version_hash = frame.header().hdlVersion().toU32Hash();
 
           metadata_pub->publish(metadata);
           RCLCPP_INFO(get_logger(),
-                      "Published static metadata for device: %s",
-                      metadata.device_id.c_str());
+                      "Published static metadata for device: %s (firmware %s, HDL %s; API %s, "
+                      "interface contract %s)",
+                      metadata.device_id.c_str(),
+                      metadata.firmware_version.c_str(),
+                      metadata.hdl_version.c_str(),
+                      metadata.api_version.c_str(),
+                      metadata.interface_contract_version.c_str());
           published_metadata = true;
         }
       }

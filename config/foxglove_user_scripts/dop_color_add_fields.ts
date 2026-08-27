@@ -102,8 +102,16 @@ function mapDopplerToRGB(
 ): number[][] {
     // Auto-range if both bounds are set to 0
     if (minDoppler == 0.0 && maxDoppler == 0.0) {
-        minDoppler = Math.min(...velocities);
-        maxDoppler = Math.max(...velocities);
+        // One pass: a spread (Math.min(...velocities)) overflows the call stack on a
+        // full frame.
+        let dataMin = Infinity;
+        let dataMax = -Infinity;
+        for (const velocity of velocities) {
+            if (velocity < dataMin) dataMin = velocity;
+            if (velocity > dataMax) dataMax = velocity;
+        }
+        minDoppler = dataMin;
+        maxDoppler = dataMax;
     }
 
     // Ensure min is negative (moving away) and max is positive (moving toward)
@@ -150,6 +158,7 @@ export default function script(
         row_step: number;
         point_step: number;
         data: Uint8Array;
+        fields: { name: string; offset: number }[];
         header: {
             stamp: {
                 sec: number;
@@ -159,17 +168,6 @@ export default function script(
         };
     }
 
-    interface APIPointCloudMessage {
-        point_stride: number;
-        data: Uint8Array;
-        timestamp: {
-            sec: number;
-            nsec: number;
-        };
-        frame_id: string;
-        fields: any[];
-    }
-
     // Type guard functions
     // This is used because TypeScript can't infer the type of the message during compilation, but we can check it at runtime
     // Ref: https://www.typescriptlang.org/docs/handbook/advanced-types.html#using-the-in-operator
@@ -177,27 +175,27 @@ export default function script(
         return "row_step" in message && "point_step" in message;
     }
 
-    function isAPIPointCloud(message: any): message is APIPointCloudMessage {
-        return "point_stride" in message;
-    }
-
     if (isROS2PointCloud(event.message)) {
         // Process ROS2 point cloud message
         const {
             data,
             point_step: originalStride,
+            fields,
             header: ros_header,
         } = event.message;
+
+        const valueField = fields.find((f) => f.name === "v");
+        if (!valueField) {
+            throw new Error("PointCloud2 has no 'v' field");
+        }
 
         return processROS2PointCloud(
             data,
             originalStride,
+            valueField.offset,
             ros_header,
             globalVars,
         );
-    } else if (isAPIPointCloud(event.message)) {
-        // Process API point cloud message
-        return processAPIPointCloud(event.message, globalVars);
     } else {
         throw new Error("Unknown point cloud message format");
     }
@@ -305,6 +303,7 @@ function createXYZRGBAPointCloud(
 function processROS2PointCloud(
     data: Uint8Array,
     originalStride: number,
+    valueOffset: number,
     ros_header: {
         stamp: {
             sec: number;
@@ -315,7 +314,6 @@ function processROS2PointCloud(
     globalVars: GlobalVariables,
 ) {
     const XYZ_OFFSET = 0;
-    const DOP_OFFSET = 16;
     const numPoints = data.length / originalStride;
 
     // Extract XYZ and Doppler values
@@ -324,7 +322,7 @@ function processROS2PointCloud(
         originalStride,
         numPoints,
         XYZ_OFFSET,
-        DOP_OFFSET,
+        valueOffset,
     );
 
     // Map Doppler values to RGB colors
@@ -346,75 +344,6 @@ function processROS2PointCloud(
             nsec: ros_header.stamp.nsec,
         },
         frame_id: ros_header.frame_id,
-        pose: {
-            position: { x: 0, y: 0, z: 0 },
-            orientation: { x: 0, y: 0, z: 0, w: 1 },
-        },
-        point_stride: XYZRGBA_STRIDE,
-        fields: XYZRGBA_FIELDS,
-        data: xyzrgbaData,
-    };
-}
-
-/**
- * Processes an API PointCloud message and adds color information based on Doppler values
- * @param api_message API PointCloud message
- * @param globalVars Global variables for Doppler bounds
- * @returns Modified PointCloud message with color information
- */
-function processAPIPointCloud(
-    api_message: {
-        data: Uint8Array;
-        point_stride: number;
-        timestamp: {
-            sec: number;
-            nsec: number;
-        };
-        frame_id: string;
-        fields: any[];
-    },
-    globalVars: GlobalVariables,
-) {
-    const XYZ_OFFSET = 8;
-    const DOP_OFFSET = 20;
-
-    // Get the original point cloud data as a Uint8Array
-    const {
-        data,
-        point_stride: old_strid,
-        timestamp: ts,
-        frame_id: fid,
-    } = api_message;
-
-    const numPoints = Math.floor(data.length / old_strid);
-
-    // Extract XYZ and Doppler values
-    const { xyz, dopplerValues } = extractXYZAndDoppler(
-        data,
-        old_strid,
-        numPoints,
-        XYZ_OFFSET,
-        DOP_OFFSET,
-    );
-
-    // Map the Doppler values to RGB colors
-    const dopplerColors = mapDopplerToRGB(
-        dopColorMap,
-        dopplerValues,
-        globalVars.min_dop_bound,
-        globalVars.max_dop_bound,
-    );
-
-    // Create XYZRGBA point cloud
-    const xyzrgbaData = createXYZRGBAPointCloud(xyz, dopplerColors, numPoints);
-
-    // Return the modified point cloud message
-    return {
-        timestamp: {
-            sec: ts.sec,
-            nsec: ts.nsec,
-        },
-        frame_id: fid,
         pose: {
             position: { x: 0, y: 0, z: 0 },
             orientation: { x: 0, y: 0, z: 0, w: 1 },

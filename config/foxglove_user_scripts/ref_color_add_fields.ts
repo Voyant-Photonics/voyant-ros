@@ -93,15 +93,23 @@ function mapRefToRgb(
     minRef: number,
     maxRef: number,
 ): number[][] {
+    // One pass: a spread (Math.min(...refValues)) overflows the call stack on a full frame.
+    let dataMin = Infinity;
+    let dataMax = -Infinity;
+    for (const value of refValues) {
+        if (value < dataMin) dataMin = value;
+        if (value > dataMax) dataMax = value;
+    }
+
     // Auto-range if both bounds are set to 0
     if (minRef == 0.0 && maxRef == 0.0) {
-        minRef = Math.min(...refValues);
-        maxRef = Math.max(...refValues);
+        minRef = dataMin;
+        maxRef = dataMax;
     }
 
     // Find actual min/max within bounds
-    const validMin = Math.max(minRef, Math.min(...refValues));
-    const validMax = Math.min(maxRef, Math.max(...refValues));
+    const validMin = Math.max(minRef, dataMin);
+    const validMax = Math.min(maxRef, dataMax);
     const range = validMax - validMin;
 
     return refValues.map((value) => {
@@ -132,18 +140,6 @@ function bytesToFloat32(bytes: Uint8Array): number {
 }
 
 /**
- * Safely converts a linear value to dB scale
- * @param val Linear value
- * @returns dB value, or -100 for zero/negative values
- */
-function safeLog10dB(val: number): number {
-    if (val > 0) {
-        return 10 * Math.log10(val);
-    }
-    return -100;
-}
-
-/**
  * Main script function to process point cloud data and color it based on reflectance values
  * @param event Input event containing LiDAR point cloud data
  * @param globalVars Global variables for reflectance bounds
@@ -158,6 +154,7 @@ export default function script(
         row_step: number;
         point_step: number;
         data: Uint8Array;
+        fields: { name: string; offset: number }[];
         header: {
             stamp: {
                 sec: number;
@@ -167,17 +164,6 @@ export default function script(
         };
     }
 
-    interface APIPointCloudMessage {
-        point_stride: number;
-        data: Uint8Array;
-        timestamp: {
-            sec: number;
-            nsec: number;
-        };
-        frame_id: string;
-        fields: any[];
-    }
-
     // Type guard functions
     // This is used because TypeScript can't infer the type of the message during compilation, but we can check it at runtime
     // Ref: https://www.typescriptlang.org/docs/handbook/advanced-types.html#using-the-in-operator
@@ -185,27 +171,27 @@ export default function script(
         return "row_step" in message && "point_step" in message;
     }
 
-    function isAPIPointCloud(message: any): message is APIPointCloudMessage {
-        return "point_stride" in message;
-    }
-
     if (isROS2PointCloud(event.message)) {
         // Process ROS2 point cloud message
         const {
             data,
             point_step: originalStride,
+            fields,
             header: ros_header,
         } = event.message;
+
+        // Older recordings may lack calibrated_reflectance
+        const refField = fields.find(
+            (f) => f.name === "calibrated_reflectance",
+        );
 
         return processROS2PointCloud(
             data,
             originalStride,
+            refField ? refField.offset : undefined,
             ros_header,
             globalVars,
         );
-    } else if (isAPIPointCloud(event.message)) {
-        // Process API point cloud message
-        return processAPIPointCloud(event.message, globalVars);
     } else {
         throw new Error("Unknown point cloud message format");
     }
@@ -243,15 +229,13 @@ function extractXYZAndReflectance(
         xyz[i * 3 + 1] = xyzView.getFloat32(XYZ_OFFSET + 4, true); // y
         xyz[i * 3 + 2] = xyzView.getFloat32(XYZ_OFFSET + 8, true); // z
 
-        // Extract reflectance and convert to dB
+        // calibrated_reflectance is already in dB -- the SDK applies 10*log10 when it
+        // generates the point, so log-scaling it again here would be a second decade.
         const refBytes = data.slice(
             pointOffset + REF_OFFSET,
             pointOffset + REF_OFFSET + 4,
         );
-        const refValue = bytesToFloat32(refBytes);
-        // Safely convert to dB scale
-        const refDb = safeLog10dB(refValue);
-        refValues.push(refDb);
+        refValues.push(bytesToFloat32(refBytes));
     }
 
     return { xyz, refValues };
@@ -346,6 +330,7 @@ function createXYZRGBAPointCloud(
 function processROS2PointCloud(
     data: Uint8Array,
     originalStride: number,
+    refOffset: number | undefined,
     ros_header: {
         stamp: {
             sec: number;
@@ -356,25 +341,19 @@ function processROS2PointCloud(
     globalVars: GlobalVariables,
 ) {
     const XYZ_OFFSET = 0;
-    const REF_OFFSET = 36;
-    const VOYANT_POINT_STRIDE = 48; // Standard VoyantPoint without reflectance
     const numPoints = data.length / originalStride;
-
-    // Check if this is the extended format with reflectance
-    // Only VoyantPointMdlExtended (stride > 48) has reflectance data
-    const hasReflectance = originalStride > VOYANT_POINT_STRIDE;
 
     let xyz: Float32Array;
     let rgbColors: number[][];
 
-    if (hasReflectance) {
+    if (refOffset !== undefined) {
         // Extract XYZ and reflectance values
         const result = extractXYZAndReflectance(
             data,
             originalStride,
             numPoints,
             XYZ_OFFSET,
-            REF_OFFSET,
+            refOffset,
         );
         xyz = result.xyz;
 
@@ -405,80 +384,6 @@ function processROS2PointCloud(
             nsec: ros_header.stamp.nsec,
         },
         frame_id: ros_header.frame_id,
-        pose: {
-            position: { x: 0, y: 0, z: 0 },
-            orientation: { x: 0, y: 0, z: 0, w: 1 },
-        },
-        point_stride: XYZRGBA_STRIDE,
-        fields: XYZRGBA_FIELDS,
-        data: coloredPointCloud,
-    };
-}
-
-/**
- * Processes an API PointCloud message and adds color information based on reflectance values
- * API messages always have reflectance data available
- * @param api_message API PointCloud message
- * @param globalVars Global variables for reflectance bounds
- * @returns Modified PointCloud message with color information
- */
-function processAPIPointCloud(
-    api_message: {
-        data: Uint8Array;
-        point_stride: number;
-        timestamp: {
-            sec: number;
-            nsec: number;
-        };
-        frame_id: string;
-        fields: any[];
-    },
-    globalVars: GlobalVariables,
-) {
-    const XYZ_OFFSET = 8;
-    const REF_OFFSET = 28;
-
-    // Get the original point cloud data as a Uint8Array
-    const {
-        data,
-        point_stride: old_strid,
-        timestamp: ts,
-        frame_id: fid,
-    } = api_message;
-
-    const numPoints = Math.floor(data.length / old_strid);
-
-    // Extract XYZ and reflectance values (always available in API messages)
-    const { xyz, refValues } = extractXYZAndReflectance(
-        data,
-        old_strid,
-        numPoints,
-        XYZ_OFFSET,
-        REF_OFFSET,
-    );
-
-    // Convert reflectance values to RGB colors
-    const rgbColors = mapRefToRgb(
-        colorMap,
-        refValues,
-        globalVars.min_ref_bound,
-        globalVars.max_ref_bound,
-    );
-
-    // Create the new point cloud data with added color information
-    const coloredPointCloud = createXYZRGBAPointCloud(
-        xyz,
-        rgbColors,
-        numPoints,
-    );
-
-    // Return the modified point cloud message
-    return {
-        timestamp: {
-            sec: ts.sec,
-            nsec: ts.nsec,
-        },
-        frame_id: fid,
         pose: {
             position: { x: 0, y: 0, z: 0 },
             orientation: { x: 0, y: 0, z: 0, w: 1 },
